@@ -623,7 +623,6 @@ body {
 <div id="login-screen" style="display:none;position:fixed;inset:0;z-index:9999;background:#0f172a;align-items:center;justify-content:center;">
   <div style="background:#1e293b;border-radius:16px;padding:2rem;width:340px;box-shadow:0 8px 32px rgba(0,0,0,.6);">
     <div style="text-align:center;margin-bottom:1.5rem;">
-      <div style="font-size:2rem;margin-bottom:.25rem;">🏥</div>
       <h2 style="color:#f1f5f9;font-size:1.25rem;font-weight:700;margin:0;">PlanningIDE</h2>
       <p style="color:#64748b;font-size:.8rem;margin:.25rem 0 0;">Médecine 2</p>
     </div>
@@ -2656,18 +2655,11 @@ function _ideRender() {
   // Bottom nav
   const nav = document.createElement('div');
   nav.style.cssText = 'background:#1e293b;border-top:1px solid #334155;display:flex;flex-shrink:0;';
-  [['planning','📅','Planning'],['requests','✉️','Requêtes'],['settings','⚙️','Paramètres']].forEach(([t, icon, label]) => {
+  [['planning','Planning'],['requests','Requêtes'],['settings','Paramètres']].forEach(([t, label]) => {
     const btn = document.createElement('button');
     const active = tab === t;
-    btn.style.cssText = 'flex:1;padding:.6rem .25rem .4rem;background:transparent;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;color:' + (active ? '#38bdf8' : '#64748b') + ';border-top:2px solid ' + (active ? '#38bdf8' : 'transparent') + ';';
-    const ico = document.createElement('span');
-    ico.style.fontSize = '1.2rem';
-    ico.textContent = icon;
-    const lbl = document.createElement('span');
-    lbl.style.fontSize = '.65rem';
-    lbl.textContent = label;
-    btn.appendChild(ico);
-    btn.appendChild(lbl);
+    btn.style.cssText = 'flex:1;padding:.75rem .25rem;background:transparent;border:none;border-top:2px solid ' + (active ? '#38bdf8' : 'transparent') + ';cursor:pointer;color:' + (active ? '#38bdf8' : '#64748b') + ';font-size:.82rem;font-weight:' + (active ? '700' : '400') + ';';
+    btn.textContent = label;
     btn.onclick = () => { _ideViewState.tab = t; _ideRender(); };
     nav.appendChild(btn);
   });
@@ -2711,10 +2703,17 @@ function _ideRenderPlanning(container) {
   }
   const stats = document.createElement('div');
   stats.style.cssText = 'display:flex;gap:0;background:#0f172a;border-bottom:1px solid #1e293b;';
-  [['Travail','⚡',workDays,'#38bdf8'],['Repos','😴',restDays,'#94a3b8'],['CA','🌴',caDays,'#4ade80']].forEach(([label, icon, val, color]) => {
+  [['Travail',workDays,'#38bdf8'],['Repos',restDays,'#94a3b8'],['CA',caDays,'#4ade80']].forEach(([label, val, color]) => {
     const s = document.createElement('div');
     s.style.cssText = 'flex:1;text-align:center;padding:.5rem .25rem;border-right:1px solid #1e293b;';
-    s.innerHTML = '<div style="font-size:1.1rem;">' + icon + '</div><div style="font-size:1.1rem;font-weight:700;color:' + color + ';">' + val + '</div><div style="font-size:.65rem;color:#64748b;">' + label + '</div>';
+    const valEl = document.createElement('div');
+    valEl.style.cssText = 'font-size:1.3rem;font-weight:700;color:' + color + ';';
+    valEl.textContent = val;
+    const lblEl = document.createElement('div');
+    lblEl.style.cssText = 'font-size:.65rem;color:#64748b;';
+    lblEl.textContent = label;
+    s.appendChild(valEl);
+    s.appendChild(lblEl);
     stats.appendChild(s);
   });
   container.appendChild(stats);
@@ -2942,7 +2941,10 @@ async function submitIdeRequest() {
 // initApp() démarre tout
 initApp();
 </script>
-<!-- IDE REQUEST MODAL -->
+
+</div><!-- /app-root -->
+
+<!-- IDE REQUEST MODAL — hors app-root pour rester visible en vue IDE -->
 <div class="overlay" id="ide-request-modal" style="display:none;">
   <div class="modal" style="max-width:420px;">
     <div class="modal-header">
@@ -2966,7 +2968,5 @@ initApp();
     </div>
   </div>
 </div>
-
-</div><!-- /app-root -->
 </body>
 </html>
