@@ -646,8 +646,15 @@ body {
 <!-- IDE PERSONAL VIEW -->
 <div id="ide-view" style="display:none;min-height:100vh;background:#0f172a;color:#f1f5f9;"></div>
 
+<!-- LOADING SCREEN -->
+<div id="loading-screen" style="display:flex;position:fixed;inset:0;z-index:9998;background:#0f172a;align-items:center;justify-content:center;flex-direction:column;gap:1rem;">
+  <div style="width:36px;height:36px;border:3px solid #334155;border-top-color:#38bdf8;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+  <div style="color:#64748b;font-size:.85rem;">Chargement...</div>
+</div>
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+
 <!-- APP ROOT -->
-<div id="app-root" style="display:flex;flex-direction:column;height:100vh;">
+<div id="app-root" style="display:none;flex-direction:column;height:100vh;">
 
 <!-- APP HEADER -->
 <header class="app-header">
@@ -2448,25 +2455,29 @@ async function initApp() {
     refreshAll();
     return;
   }
+  // Supabase configuré : vérification de session avant d'afficher quoi que ce soit
   const sb = getSB();
   const { data: { session } } = await sb.auth.getSession();
   if (!session) { showLoginScreen(); return; }
   await handleLogin(session.user);
 }
 
-function showLoginScreen() {
-  document.getElementById('login-screen').style.display = 'flex';
+function _hideAll() {
+  document.getElementById('loading-screen').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app-root').style.display = 'none';
   document.getElementById('ide-view').style.display = 'none';
+}
+function showLoginScreen() {
+  _hideAll();
+  document.getElementById('login-screen').style.display = 'flex';
 }
 function showCadreView() {
-  document.getElementById('login-screen').style.display = 'none';
+  _hideAll();
   document.getElementById('app-root').style.display = 'flex';
-  document.getElementById('ide-view').style.display = 'none';
 }
 function showIdeView() {
-  document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('app-root').style.display = 'none';
+  _hideAll();
   document.getElementById('ide-view').style.display = 'block';
 }
 
