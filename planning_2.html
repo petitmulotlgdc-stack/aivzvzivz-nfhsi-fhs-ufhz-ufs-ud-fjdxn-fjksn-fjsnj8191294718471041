@@ -621,18 +621,26 @@ body {
 
 <!-- LOGIN SCREEN -->
 <div id="login-screen" style="display:none;position:fixed;inset:0;z-index:9999;background:#0f172a;align-items:center;justify-content:center;">
-  <div style="background:#1e293b;border-radius:12px;padding:2rem;width:340px;box-shadow:0 8px 32px rgba(0,0,0,.5);">
-    <h2 style="color:#f1f5f9;font-size:1.3rem;font-weight:700;margin-bottom:1.5rem;text-align:center;">PlanningIDE</h2>
+  <div style="background:#1e293b;border-radius:16px;padding:2rem;width:340px;box-shadow:0 8px 32px rgba(0,0,0,.6);">
+    <div style="text-align:center;margin-bottom:1.5rem;">
+      <div style="font-size:2rem;margin-bottom:.25rem;">🏥</div>
+      <h2 style="color:#f1f5f9;font-size:1.25rem;font-weight:700;margin:0;">PlanningIDE</h2>
+      <p style="color:#64748b;font-size:.8rem;margin:.25rem 0 0;">Médecine 2</p>
+    </div>
     <div class="form-group">
       <label class="form-label">Email</label>
-      <input class="form-input" id="login-email" type="email" placeholder="cadre@hopital.fr" autocomplete="username">
+      <input class="form-input" id="login-email" type="email" placeholder="prenom@hopital.fr" autocomplete="username" style="font-size:16px;">
     </div>
     <div class="form-group" style="margin-top:.75rem;">
       <label class="form-label">Mot de passe</label>
-      <input class="form-input" id="login-password" type="password" autocomplete="current-password">
+      <input class="form-input" id="login-password" type="password" autocomplete="current-password" style="font-size:16px;" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div style="display:flex;align-items:center;gap:.5rem;margin-top:.75rem;">
+      <input type="checkbox" id="login-remember" checked style="width:16px;height:16px;cursor:pointer;">
+      <label for="login-remember" style="color:#94a3b8;font-size:.85rem;cursor:pointer;">Rester connecté</label>
     </div>
     <div id="login-error" style="color:#f87171;font-size:.8rem;margin-top:.5rem;min-height:1rem;"></div>
-    <button class="btn btn-primary" onclick="doLogin()" style="width:100%;margin-top:1rem;">Connexion</button>
+    <button class="btn btn-primary" onclick="doLogin()" style="width:100%;margin-top:1rem;padding:.75rem;font-size:1rem;">Connexion</button>
   </div>
 </div>
 
@@ -2369,7 +2377,10 @@ const SUPABASE_URL = 'https://svcelyavtkgxwhtkyqll.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN2Y2VseWF2dGtneHdodGt5cWxsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxMDI0OTQsImV4cCI6MjA5MTY3ODQ5NH0.1LzhNSMGQYQnlkjhVM6TE67DVbs23IJhJ9hc57XgvN8';
 let _sb = null;
 function getSB() {
-  if (!_sb) _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  if (!_sb) {
+    const persist = !document.getElementById('login-remember') || document.getElementById('login-remember').checked;
+    _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: persist } });
+  }
   return _sb;
 }
 function escHtml(s) {
@@ -2595,84 +2606,313 @@ async function loadIdePlanningAndShow(ideId) {
   renderIdePersonalView(ide, plan);
 }
 
+// ---- IDE VIEW STATE ----
+let _ideViewState = { ide: null, plan: null, month: new Date().getMonth(), tab: 'planning', myRequests: [] };
+
 function renderIdePersonalView(ide, plan) {
-  const container = document.getElementById('ide-view');
-  container.textContent = '';
-  const MONTHS_FR = ['Janvier','Fevrier','Mars','Avril','Mai','Juin','Juillet','Aout','Septembre','Octobre','Novembre','Decembre'];
-  const DAYS_SHORT = ['D','L','M','M','J','V','S'];
-
-  const wrapper = document.createElement('div');
-  wrapper.style.cssText = 'max-width:900px;margin:0 auto;padding:1.5rem;';
-
-  const topBar = document.createElement('div');
-  topBar.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap;gap:.5rem;';
-  const title = document.createElement('h2');
-  title.style.cssText = 'color:#f1f5f9;font-size:1.3rem;font-weight:700;';
-  title.textContent = ide.name + ' — Planning ' + app.year;
-  const btnRow = document.createElement('div');
-  btnRow.style.cssText = 'display:flex;gap:.5rem;align-items:center;';
-  const userSpan = document.createElement('span');
-  userSpan.style.cssText = 'color:#94a3b8;font-size:.85rem;';
-  userSpan.textContent = document.getElementById('user-info').textContent;
-  const logoutBtn = document.createElement('button');
-  logoutBtn.className = 'btn btn-sm';
-  logoutBtn.style.cssText = 'background:#334155;color:#f1f5f9;';
-  logoutBtn.textContent = 'Deconnexion';
-  logoutBtn.onclick = doLogout;
-  btnRow.appendChild(userSpan);
-  btnRow.appendChild(logoutBtn);
-  topBar.appendChild(title);
-  topBar.appendChild(btnRow);
-  wrapper.appendChild(topBar);
-
-  for (let m = 0; m < 12; m++) {
-    const section = document.createElement('div');
-    section.style.marginBottom = '1.5rem';
-    const mTitle = document.createElement('h3');
-    mTitle.style.cssText = 'color:#94a3b8;font-size:.95rem;font-weight:600;margin-bottom:.5rem;';
-    mTitle.textContent = MONTHS_FR[m] + ' ' + app.year;
-    section.appendChild(mTitle);
-    const grid = document.createElement('div');
-    grid.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px;';
-    const days = daysInMonth(app.year, m);
-    for (let d = 1; d <= days; d++) {
-      const ds = dateStr(app.year, m, d);
-      const code = plan[ds] || '';
-      const dayObj = new Date(app.year, m, d);
-      const dow = DAYS_SHORT[dayObj.getDay()];
-      const isWE = dayObj.getDay() === 0 || dayObj.getDay() === 6;
-      const codeInfo = app.codes[code] || {};
-      const bg = codeInfo.color || (isWE ? '#1e293b' : '#0f172a');
-      const cell = document.createElement('div');
-      cell.title = (codeInfo.label || code || 'Libre') + ' — Cliquer pour faire une requete';
-      cell.style.cssText = 'width:52px;border-radius:6px;padding:4px 2px;text-align:center;cursor:pointer;background:' + bg + ';color:#f1f5f9;border:1px solid #334155;';
-      const dayLabel = document.createElement('div');
-      dayLabel.style.cssText = 'font-size:.65rem;color:#94a3b8;';
-      dayLabel.textContent = dow + ' ' + d;
-      const codeLabel = document.createElement('div');
-      codeLabel.style.cssText = 'font-size:.8rem;font-weight:600;';
-      codeLabel.textContent = code || '—';
-      cell.appendChild(dayLabel);
-      cell.appendChild(codeLabel);
-      const capturedDs = ds;
-      cell.onclick = () => openIdeRequestModal(capturedDs);
-      grid.appendChild(cell);
-    }
-    section.appendChild(grid);
-    wrapper.appendChild(section);
-  }
-
-  const logoutBtn2 = document.createElement('button');
-  logoutBtn2.className = 'btn';
-  logoutBtn2.style.cssText = 'background:#334155;color:#f1f5f9;margin-top:1rem;';
-  logoutBtn2.textContent = 'Deconnexion';
-  logoutBtn2.onclick = doLogout;
-  wrapper.appendChild(logoutBtn2);
-  container.appendChild(wrapper);
+  _ideViewState.ide = ide;
+  _ideViewState.plan = plan;
+  _ideViewState.month = new Date().getMonth();
+  _ideRender();
 }
 
-function openIdeRequestModal(ds) {
+function _ideRender() {
+  const container = document.getElementById('ide-view');
+  container.textContent = '';
+  const { ide, tab } = _ideViewState;
+
+  // ---- SHELL ----
+  const shell = document.createElement('div');
+  shell.style.cssText = 'display:flex;flex-direction:column;height:100vh;max-width:480px;margin:0 auto;background:#0f172a;';
+
+  // Header
+  const hdr = document.createElement('div');
+  hdr.style.cssText = 'background:#1e293b;padding:.85rem 1rem;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #334155;flex-shrink:0;';
+  const hdrLeft = document.createElement('div');
+  const hdrName = document.createElement('div');
+  hdrName.style.cssText = 'color:#f1f5f9;font-weight:700;font-size:1rem;';
+  hdrName.textContent = ide.name.split(' ')[0];
+  const hdrSub = document.createElement('div');
+  hdrSub.style.cssText = 'color:#64748b;font-size:.72rem;';
+  hdrSub.textContent = 'Planning ' + app.year;
+  hdrLeft.appendChild(hdrName);
+  hdrLeft.appendChild(hdrSub);
+  const logoutBtn = document.createElement('button');
+  logoutBtn.style.cssText = 'background:transparent;border:1px solid #334155;color:#94a3b8;border-radius:6px;padding:.3rem .7rem;font-size:.78rem;cursor:pointer;';
+  logoutBtn.textContent = 'Déconnexion';
+  logoutBtn.onclick = doLogout;
+  hdr.appendChild(hdrLeft);
+  hdr.appendChild(logoutBtn);
+  shell.appendChild(hdr);
+
+  // Content area
+  const content = document.createElement('div');
+  content.style.cssText = 'flex:1;overflow-y:auto;';
+  if (tab === 'planning') _ideRenderPlanning(content);
+  else if (tab === 'requests') _ideRenderRequests(content);
+  else if (tab === 'settings') _ideRenderSettings(content);
+  shell.appendChild(content);
+
+  // Bottom nav
+  const nav = document.createElement('div');
+  nav.style.cssText = 'background:#1e293b;border-top:1px solid #334155;display:flex;flex-shrink:0;';
+  [['planning','📅','Planning'],['requests','✉️','Requêtes'],['settings','⚙️','Paramètres']].forEach(([t, icon, label]) => {
+    const btn = document.createElement('button');
+    const active = tab === t;
+    btn.style.cssText = 'flex:1;padding:.6rem .25rem .4rem;background:transparent;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;color:' + (active ? '#38bdf8' : '#64748b') + ';border-top:2px solid ' + (active ? '#38bdf8' : 'transparent') + ';';
+    const ico = document.createElement('span');
+    ico.style.fontSize = '1.2rem';
+    ico.textContent = icon;
+    const lbl = document.createElement('span');
+    lbl.style.fontSize = '.65rem';
+    lbl.textContent = label;
+    btn.appendChild(ico);
+    btn.appendChild(lbl);
+    btn.onclick = () => { _ideViewState.tab = t; _ideRender(); };
+    nav.appendChild(btn);
+  });
+  shell.appendChild(nav);
+  container.appendChild(shell);
+}
+
+function _ideRenderPlanning(container) {
+  const { ide, plan, month } = _ideViewState;
+  const MONTHS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  const DAYS_LONG = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+
+  // Month nav
+  const nav = document.createElement('div');
+  nav.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:.75rem 1rem;background:#1e293b;border-bottom:1px solid #334155;position:sticky;top:0;z-index:1;';
+  const prevBtn = document.createElement('button');
+  prevBtn.style.cssText = 'background:transparent;border:none;color:#94a3b8;font-size:1.3rem;cursor:pointer;padding:.25rem .5rem;';
+  prevBtn.textContent = '‹';
+  prevBtn.onclick = () => { _ideViewState.month = (_ideViewState.month + 11) % 12; _ideRender(); };
+  const monthLabel = document.createElement('span');
+  monthLabel.style.cssText = 'color:#f1f5f9;font-weight:600;font-size:1rem;';
+  monthLabel.textContent = MONTHS_FR[month] + ' ' + app.year;
+  const nextBtn = document.createElement('button');
+  nextBtn.style.cssText = 'background:transparent;border:none;color:#94a3b8;font-size:1.3rem;cursor:pointer;padding:.25rem .5rem;';
+  nextBtn.textContent = '›';
+  nextBtn.onclick = () => { _ideViewState.month = (_ideViewState.month + 1) % 12; _ideRender(); };
+  nav.appendChild(prevBtn);
+  nav.appendChild(monthLabel);
+  nav.appendChild(nextBtn);
+  container.appendChild(nav);
+
+  // Stats bar
+  const days = daysInMonth(app.year, month);
+  let workDays = 0, restDays = 0, caDays = 0;
+  for (let d = 1; d <= days; d++) {
+    const ds = dateStr(app.year, month, d);
+    const code = plan[ds] || '';
+    if (isWorkCode(code)) workDays++;
+    else if (code === 'RH' || code === '-') restDays++;
+    else if (code === 'CA' || code === 'CA-1') caDays++;
+  }
+  const stats = document.createElement('div');
+  stats.style.cssText = 'display:flex;gap:0;background:#0f172a;border-bottom:1px solid #1e293b;';
+  [['Travail','⚡',workDays,'#38bdf8'],['Repos','😴',restDays,'#94a3b8'],['CA','🌴',caDays,'#4ade80']].forEach(([label, icon, val, color]) => {
+    const s = document.createElement('div');
+    s.style.cssText = 'flex:1;text-align:center;padding:.5rem .25rem;border-right:1px solid #1e293b;';
+    s.innerHTML = '<div style="font-size:1.1rem;">' + icon + '</div><div style="font-size:1.1rem;font-weight:700;color:' + color + ';">' + val + '</div><div style="font-size:.65rem;color:#64748b;">' + label + '</div>';
+    stats.appendChild(s);
+  });
+  container.appendChild(stats);
+
+  // Day list
+  const list = document.createElement('div');
+  list.style.padding = '.5rem';
+  for (let d = 1; d <= days; d++) {
+    const ds = dateStr(app.year, month, d);
+    const code = plan[ds] || '';
+    const dayObj = new Date(app.year, month, d);
+    const isWE = dayObj.getDay() === 0 || dayObj.getDay() === 6;
+    const codeInfo = app.codes[code] || {};
+    const isWork = isWorkCode(code);
+
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;padding:.6rem .75rem;border-radius:10px;margin-bottom:4px;cursor:pointer;background:' + (isWE ? '#131f2e' : '#0f172a') + ';border:1px solid ' + (isWork ? '#1e40af33' : '#1e293b') + ';';
+    row.onmouseenter = () => { row.style.background = '#1e293b'; };
+    row.onmouseleave = () => { row.style.background = isWE ? '#131f2e' : '#0f172a'; };
+
+    // Date column
+    const dateCol = document.createElement('div');
+    dateCol.style.cssText = 'width:44px;flex-shrink:0;';
+    const dayNum = document.createElement('div');
+    dayNum.style.cssText = 'font-size:1.2rem;font-weight:700;color:' + (isWE ? '#94a3b8' : '#f1f5f9') + ';line-height:1;';
+    dayNum.textContent = d;
+    const dayName = document.createElement('div');
+    dayName.style.cssText = 'font-size:.65rem;color:#64748b;';
+    dayName.textContent = DAYS_LONG[dayObj.getDay()].substring(0,3);
+    dateCol.appendChild(dayNum);
+    dateCol.appendChild(dayName);
+    row.appendChild(dateCol);
+
+    // Code badge
+    const badge = document.createElement('div');
+    const badgeBg = codeInfo.color || (code ? '#334155' : 'transparent');
+    badge.style.cssText = 'width:48px;flex-shrink:0;text-align:center;padding:.3rem .2rem;border-radius:8px;background:' + badgeBg + ';margin:0 .75rem;';
+    const badgeCode = document.createElement('div');
+    badgeCode.style.cssText = 'font-size:.85rem;font-weight:700;color:#f1f5f9;';
+    badgeCode.textContent = code || '—';
+    badge.appendChild(badgeCode);
+    row.appendChild(badge);
+
+    // Label
+    const labelCol = document.createElement('div');
+    labelCol.style.cssText = 'flex:1;';
+    const labelText = document.createElement('div');
+    labelText.style.cssText = 'font-size:.85rem;color:' + (code ? '#cbd5e1' : '#475569') + ';';
+    labelText.textContent = codeInfo.label || (code ? code : 'Libre');
+    labelCol.appendChild(labelText);
+    row.appendChild(labelCol);
+
+    // Arrow
+    const arrow = document.createElement('div');
+    arrow.style.cssText = 'color:#334155;font-size:.9rem;';
+    arrow.textContent = '›';
+    row.appendChild(arrow);
+
+    const capturedDs = ds;
+    const capturedCode = code;
+    const capturedLabel = codeInfo.label || (code || 'Libre');
+    row.onclick = () => openIdeRequestModal(capturedDs, capturedCode, capturedLabel);
+    list.appendChild(row);
+  }
+  container.appendChild(list);
+}
+
+async function _ideRenderRequests(container) {
+  container.style.padding = '.75rem';
+  const title = document.createElement('h3');
+  title.style.cssText = 'color:#94a3b8;font-size:.85rem;font-weight:600;margin:0 0 .75rem;text-transform:uppercase;letter-spacing:.05em;';
+  title.textContent = 'Mes demandes envoyées';
+  container.appendChild(title);
+
+  const sb = getSB();
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return;
+  const { data: profile } = await sb.from('profiles').select('*').eq('id', session.user.id).single();
+  const { data: reqs } = await sb.from('requests').select('*').eq('ide_id', profile.ide_id).eq('year', app.year).order('created_at', { ascending: false });
+
+  if (!reqs || reqs.length === 0) {
+    const empty = document.createElement('div');
+    empty.style.cssText = 'text-align:center;color:#475569;padding:3rem 1rem;';
+    empty.textContent = 'Aucune demande envoyée.';
+    container.appendChild(empty);
+    return;
+  }
+
+  reqs.forEach(r => {
+    const card = document.createElement('div');
+    card.style.cssText = 'background:#1e293b;border-radius:10px;padding:.85rem;margin-bottom:.6rem;border-left:3px solid ' + (r.status === 'pending' ? '#f59e0b' : r.status === 'accepted' ? '#22c55e' : '#ef4444') + ';';
+    const cardTop = document.createElement('div');
+    cardTop.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;';
+    const dateSpan = document.createElement('span');
+    dateSpan.style.cssText = 'color:#f1f5f9;font-weight:600;font-size:.9rem;';
+    dateSpan.textContent = r.date_str;
+    const statusSpan = document.createElement('span');
+    statusSpan.style.cssText = 'font-size:.75rem;font-weight:600;color:' + (r.status === 'pending' ? '#f59e0b' : r.status === 'accepted' ? '#22c55e' : '#ef4444') + ';';
+    statusSpan.textContent = r.status === 'pending' ? 'En attente' : r.status === 'accepted' ? 'Acceptée' : 'Refusée';
+    cardTop.appendChild(dateSpan);
+    cardTop.appendChild(statusSpan);
+    card.appendChild(cardTop);
+    const msgEl = document.createElement('div');
+    msgEl.style.cssText = 'color:#94a3b8;font-size:.82rem;';
+    msgEl.textContent = r.message;
+    card.appendChild(msgEl);
+    if (r.cadre_response) {
+      const resp = document.createElement('div');
+      resp.style.cssText = 'margin-top:.4rem;color:#64748b;font-size:.78rem;font-style:italic;border-top:1px solid #334155;padding-top:.4rem;';
+      resp.textContent = 'Réponse : ' + r.cadre_response;
+      card.appendChild(resp);
+    }
+    container.appendChild(card);
+  });
+}
+
+function _ideRenderSettings(container) {
+  container.style.padding = '1rem';
+  const title = document.createElement('h3');
+  title.style.cssText = 'color:#94a3b8;font-size:.85rem;font-weight:600;margin:0 0 1rem;text-transform:uppercase;letter-spacing:.05em;';
+  title.textContent = 'Paramètres';
+  container.appendChild(title);
+
+  // Year selector
+  const card = document.createElement('div');
+  card.style.cssText = 'background:#1e293b;border-radius:10px;padding:1rem;margin-bottom:.75rem;';
+  const yearLabel = document.createElement('div');
+  yearLabel.style.cssText = 'color:#94a3b8;font-size:.8rem;margin-bottom:.5rem;';
+  yearLabel.textContent = 'Année affichée';
+  const yearRow = document.createElement('div');
+  yearRow.style.cssText = 'display:flex;align-items:center;gap:.75rem;';
+  const prevY = document.createElement('button');
+  prevY.style.cssText = 'background:#334155;border:none;color:#f1f5f9;border-radius:6px;padding:.3rem .75rem;font-size:1.1rem;cursor:pointer;';
+  prevY.textContent = '‹';
+  prevY.onclick = () => { app.year--; yearDisp.textContent = app.year; };
+  const yearDisp = document.createElement('span');
+  yearDisp.style.cssText = 'color:#f1f5f9;font-weight:700;font-size:1.1rem;flex:1;text-align:center;';
+  yearDisp.textContent = app.year;
+  const nextY = document.createElement('button');
+  nextY.style.cssText = 'background:#334155;border:none;color:#f1f5f9;border-radius:6px;padding:.3rem .75rem;font-size:1.1rem;cursor:pointer;';
+  nextY.textContent = '›';
+  nextY.onclick = () => { app.year++; yearDisp.textContent = app.year; };
+  const applyY = document.createElement('button');
+  applyY.style.cssText = 'background:#2563eb;border:none;color:#fff;border-radius:6px;padding:.3rem .75rem;font-size:.85rem;cursor:pointer;';
+  applyY.textContent = 'OK';
+  applyY.onclick = async () => {
+    const sb = getSB();
+    const { data } = await sb.from('planning_data').select('*').eq('year', app.year).eq('ide_id', _ideViewState.ide.id);
+    const plan = {};
+    if (data) data.forEach(row => { plan[row.date_str] = row.code; });
+    _ideViewState.plan = plan;
+    _ideViewState.month = 0;
+    _ideViewState.tab = 'planning';
+    _ideRender();
+  };
+  yearRow.appendChild(prevY);
+  yearRow.appendChild(yearDisp);
+  yearRow.appendChild(nextY);
+  yearRow.appendChild(applyY);
+  card.appendChild(yearLabel);
+  card.appendChild(yearRow);
+  container.appendChild(card);
+
+  // Profile info
+  const card2 = document.createElement('div');
+  card2.style.cssText = 'background:#1e293b;border-radius:10px;padding:1rem;margin-bottom:.75rem;';
+  const profLabel = document.createElement('div');
+  profLabel.style.cssText = 'color:#94a3b8;font-size:.8rem;margin-bottom:.5rem;';
+  profLabel.textContent = 'Mon profil';
+  const ide = _ideViewState.ide;
+  const roul = app.roulements[ide.roulement];
+  [['Nom', ide.name], ['Initiales', ide.short], ['Temps de travail', ide.pct + '%'], ['Roulement', roul ? roul.name : ide.roulement]].forEach(([k, v]) => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;justify-content:space-between;padding:.3rem 0;border-bottom:1px solid #0f172a;';
+    const key = document.createElement('span');
+    key.style.cssText = 'color:#64748b;font-size:.85rem;';
+    key.textContent = k;
+    const val = document.createElement('span');
+    val.style.cssText = 'color:#f1f5f9;font-size:.85rem;font-weight:600;';
+    val.textContent = v;
+    row.appendChild(key);
+    row.appendChild(val);
+    card2.appendChild(row);
+  });
+  card2.insertBefore(profLabel, card2.firstChild);
+  container.appendChild(card2);
+
+  // Logout
+  const logoutBtn = document.createElement('button');
+  logoutBtn.style.cssText = 'width:100%;background:#334155;border:none;color:#f1f5f9;border-radius:10px;padding:.85rem;font-size:.95rem;cursor:pointer;margin-top:.5rem;';
+  logoutBtn.textContent = 'Déconnexion';
+  logoutBtn.onclick = doLogout;
+  container.appendChild(logoutBtn);
+}
+
+function openIdeRequestModal(ds, code, label) {
   document.getElementById('ide-req-date').textContent = ds;
+  document.getElementById('ide-req-code').textContent = code ? (code + ' — ' + label) : 'Libre';
   document.getElementById('ide-req-message').value = '';
   openModal('ide-request-modal');
 }
@@ -2694,8 +2934,9 @@ async function submitIdeRequest() {
     message: msg
   });
   if (error) { alert('Erreur : ' + error.message); return; }
-  alert('Requete envoyee !');
   closeModal('ide-request-modal');
+  _ideViewState.tab = 'requests';
+  _ideRender();
 }
 
 // initApp() démarre tout
@@ -2709,10 +2950,14 @@ initApp();
       <button class="modal-close" onclick="closeModal('ide-request-modal')">&#215;</button>
     </div>
     <div class="modal-body">
-      <div style="font-size:13px;color:var(--text2);margin-bottom:12px;">Date : <strong id="ide-req-date"></strong></div>
+      <div style="background:#0f172a;border-radius:8px;padding:.75rem;margin-bottom:1rem;">
+        <div style="font-size:.75rem;color:#64748b;margin-bottom:.2rem;">Jour sélectionné</div>
+        <div style="font-size:1rem;font-weight:700;color:#f1f5f9;" id="ide-req-date"></div>
+        <div style="font-size:.82rem;color:#94a3b8;margin-top:.15rem;" id="ide-req-code"></div>
+      </div>
       <div class="form-group">
-        <label class="form-label">Votre message</label>
-        <textarea class="form-input" id="ide-req-message" rows="4" placeholder="Ex: Je souhaite poser un CA ce jour, ou échanger avec une collègue..."></textarea>
+        <label class="form-label">Votre message au cadre</label>
+        <textarea class="form-input" id="ide-req-message" rows="4" placeholder="Ex: Je souhaite poser un CA ce jour, ou échanger avec une collègue..." style="font-size:16px;"></textarea>
       </div>
     </div>
     <div class="modal-footer">
