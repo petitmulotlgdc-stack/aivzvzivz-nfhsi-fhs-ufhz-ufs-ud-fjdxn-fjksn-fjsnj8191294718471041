@@ -2,7 +2,7 @@
   "name": "PlanningIDE",
   "short_name": "PlanningIDE",
   "description": "Gestion de planning infirmier",
-  "start_url": "/planning_2.html",
+  "start_url": "./planning_2.html",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#1a5c8a",
