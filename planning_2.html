@@ -2551,7 +2551,7 @@ async function publishPlanning() {
 // =============================
 async function loadPlanningFromSupabase() {
   const sb = getSB();
-  const { data, error } = await sb.from('planning_data').select('*').eq('year', app.year).limit(3000);
+  const { data, error } = await sb.from('planning_data').select('*').eq('year', app.year).limit(2000);
   if (error || !data) return;
   data.forEach(row => {
     if (!app.planning[row.ide_id]) app.planning[row.ide_id] = {};
