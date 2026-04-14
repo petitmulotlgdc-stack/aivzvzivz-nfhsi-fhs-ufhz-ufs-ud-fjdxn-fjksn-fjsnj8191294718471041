@@ -1495,23 +1495,32 @@ function runGeneration() {
         }
 
         // ── PHASE 4b : RJF pour les fériés travaillés ───────────────────
-        // Maintenant que Phase 4 a créé des '-' compensateurs, on cherche
-        // le '-' le plus proche après chaque férié travaillé et on le
-        // remplace par 'RJF' (même catégorie, juste plus précis).
+        // Cherche le jour de travail le plus proche du férié pour poser le RJF,
+        // en vérifiant que la couverture minimale reste respectée.
+
+        // Vérifie que poser un RJF sur targetDs ne descend pas la couverture sous le minimum
+        const canPlaceRJF = (targetDs) => {
+          let cnt = 0;
+          app.ides.forEach(other => {
+            const p = other.id === ide.id ? plan : (app.planning[other.id] || {});
+            if (isWorkCode(p[targetDs])) cnt++;
+          });
+          return (cnt - 1) >= app.minIdePerjour;
+        };
+
         allDates.forEach((ds, i) => {
           if (!holidays.has(ds)) return;
           if (locked[ide.id][ds]) return;
           if (!isWorkCode(plan[ds])) return;
-          // Chercher le jour de travail le plus proche dans une fenêtre de 14 jours (avant/après)
           const RJF_WINDOW = 14;
           let placed = false;
           for (let dist = 1; dist <= RJF_WINDOW && !placed; dist++) {
             const jFwd = i + dist;
-            if (jFwd < allDates.length && isWorkCode(plan[allDates[jFwd]]) && !locked[ide.id][allDates[jFwd]]) {
+            if (jFwd < allDates.length && isWorkCode(plan[allDates[jFwd]]) && !locked[ide.id][allDates[jFwd]] && canPlaceRJF(allDates[jFwd])) {
               plan[allDates[jFwd]] = 'RJF'; placed = true;
             } else {
               const jBwd = i - dist;
-              if (jBwd >= 0 && isWorkCode(plan[allDates[jBwd]]) && !locked[ide.id][allDates[jBwd]]) {
+              if (jBwd >= 0 && isWorkCode(plan[allDates[jBwd]]) && !locked[ide.id][allDates[jBwd]] && canPlaceRJF(allDates[jBwd])) {
                 plan[allDates[jBwd]] = 'RJF'; placed = true;
               }
             }
@@ -1519,14 +1528,14 @@ function runGeneration() {
           // Repli : toute l'année si rien dans la fenêtre
           if (!placed) {
             for (let j = i + 1; j < allDates.length; j++) {
-              if (isWorkCode(plan[allDates[j]]) && !locked[ide.id][allDates[j]]) {
+              if (isWorkCode(plan[allDates[j]]) && !locked[ide.id][allDates[j]] && canPlaceRJF(allDates[j])) {
                 plan[allDates[j]] = 'RJF'; placed = true; break;
               }
             }
           }
           if (!placed) {
             for (let j = i - 1; j >= 0; j--) {
-              if (isWorkCode(plan[allDates[j]]) && !locked[ide.id][allDates[j]]) {
+              if (isWorkCode(plan[allDates[j]]) && !locked[ide.id][allDates[j]] && canPlaceRJF(allDates[j])) {
                 plan[allDates[j]] = 'RJF'; break;
               }
             }
@@ -1571,29 +1580,37 @@ function runGeneration() {
 
             // Si le jour est férié, convertir le jour de travail le plus proche en RJF
             if (isFerie) {
+              const canP5 = (targetDs) => {
+                let cnt = 0;
+                app.ides.forEach(other => {
+                  const p = other.id === ide.id ? plan : (app.planning[other.id] || {});
+                  if (isWorkCode(p[targetDs])) cnt++;
+                });
+                return (cnt - 1) >= app.minIdePerjour;
+              };
               const RJF_WINDOW = 14;
               let placed = false;
               for (let dist = 1; dist <= RJF_WINDOW && !placed; dist++) {
                 const jFwd = dsIdx + dist;
-                if (jFwd < allDates.length && isWorkCode(plan[allDates[jFwd]]) && !(locked[ide.id] && locked[ide.id][allDates[jFwd]])) {
+                if (jFwd < allDates.length && isWorkCode(plan[allDates[jFwd]]) && !(locked[ide.id] && locked[ide.id][allDates[jFwd]]) && canP5(allDates[jFwd])) {
                   plan[allDates[jFwd]] = 'RJF'; placed = true;
                 } else {
                   const jBwd = dsIdx - dist;
-                  if (jBwd >= 0 && isWorkCode(plan[allDates[jBwd]]) && !(locked[ide.id] && locked[ide.id][allDates[jBwd]])) {
+                  if (jBwd >= 0 && isWorkCode(plan[allDates[jBwd]]) && !(locked[ide.id] && locked[ide.id][allDates[jBwd]]) && canP5(allDates[jBwd])) {
                     plan[allDates[jBwd]] = 'RJF'; placed = true;
                   }
                 }
               }
               if (!placed) {
                 for (let j = dsIdx + 1; j < allDates.length; j++) {
-                  if (isWorkCode(plan[allDates[j]]) && !(locked[ide.id] && locked[ide.id][allDates[j]])) {
+                  if (isWorkCode(plan[allDates[j]]) && !(locked[ide.id] && locked[ide.id][allDates[j]]) && canP5(allDates[j])) {
                     plan[allDates[j]] = 'RJF'; placed = true; break;
                   }
                 }
               }
               if (!placed) {
                 for (let j = dsIdx - 1; j >= 0; j--) {
-                  if (isWorkCode(plan[allDates[j]]) && !(locked[ide.id] && locked[ide.id][allDates[j]])) {
+                  if (isWorkCode(plan[allDates[j]]) && !(locked[ide.id] && locked[ide.id][allDates[j]]) && canP5(allDates[j])) {
                     plan[allDates[j]] = 'RJF'; break;
                   }
                 }
@@ -2407,8 +2424,16 @@ function regenIdeMonth(ideId, monthIdx) {
     if(!plan[ds]) plan[ds] = 'F';
   });
 
-  // Phase 4b : RJF pour fériés travaillés — chercher le '-' le plus proche
+  // Phase 4b : RJF pour fériés travaillés — chercher le jour de travail le plus proche
   const allDatesYear = allDatesOfYear(app.year);
+  const canPlaceRJFRegen = (targetDs) => {
+    let cnt = 0;
+    app.ides.forEach(other => {
+      const p = other.id === ideId ? plan : (app.planning[other.id] || {});
+      if (isWorkCode(p[targetDs])) cnt++;
+    });
+    return (cnt - 1) >= app.minIdePerjour;
+  };
   monthDates.forEach(ds => {
     if(!holidays.has(ds) || locked[ds]) return;
     if(!isWorkCode(plan[ds])) return;
@@ -2417,25 +2442,25 @@ function regenIdeMonth(ideId, monthIdx) {
     let placed = false;
     for(let dist = 1; dist <= RJF_WINDOW && !placed; dist++) {
       const jFwd = i + dist;
-      if(jFwd < allDatesYear.length && isWorkCode(plan[allDatesYear[jFwd]]) && !locked[allDatesYear[jFwd]]) {
+      if(jFwd < allDatesYear.length && isWorkCode(plan[allDatesYear[jFwd]]) && !locked[allDatesYear[jFwd]] && canPlaceRJFRegen(allDatesYear[jFwd])) {
         plan[allDatesYear[jFwd]] = 'RJF'; placed = true;
       } else {
         const jBwd = i - dist;
-        if(jBwd >= 0 && isWorkCode(plan[allDatesYear[jBwd]]) && !locked[allDatesYear[jBwd]]) {
+        if(jBwd >= 0 && isWorkCode(plan[allDatesYear[jBwd]]) && !locked[allDatesYear[jBwd]] && canPlaceRJFRegen(allDatesYear[jBwd])) {
           plan[allDatesYear[jBwd]] = 'RJF'; placed = true;
         }
       }
     }
     if(!placed) {
       for(let j = i+1; j < allDatesYear.length; j++) {
-        if(isWorkCode(plan[allDatesYear[j]]) && !locked[allDatesYear[j]]) {
+        if(isWorkCode(plan[allDatesYear[j]]) && !locked[allDatesYear[j]] && canPlaceRJFRegen(allDatesYear[j])) {
           plan[allDatesYear[j]] = 'RJF'; placed = true; break;
         }
       }
     }
     if(!placed) {
       for(let j = i-1; j >= 0; j--) {
-        if(isWorkCode(plan[allDatesYear[j]]) && !locked[allDatesYear[j]]) {
+        if(isWorkCode(plan[allDatesYear[j]]) && !locked[allDatesYear[j]] && canPlaceRJFRegen(allDatesYear[j])) {
           plan[allDatesYear[j]] = 'RJF'; break;
         }
       }
