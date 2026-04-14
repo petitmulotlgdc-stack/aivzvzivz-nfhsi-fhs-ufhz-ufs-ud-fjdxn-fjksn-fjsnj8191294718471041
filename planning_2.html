@@ -2657,6 +2657,7 @@ async function loadPlanningFromSupabase() {
       .select('*').eq('year', app.year).range(from, from + PAGE - 1);
     if (error || !data || data.length === 0) break;
     data.forEach(row => {
+      if (row.code === 'RJF') return; // recalculé à la génération
       if (!app.planning[row.ide_id]) app.planning[row.ide_id] = {};
       app.planning[row.ide_id][row.date_str] = row.code;
     });
