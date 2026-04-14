@@ -2227,7 +2227,7 @@ function regenIdeMonth(ideId, monthIdx) {
   app.ides.forEach(i => { weCount[i.id] = 0; });
   allDatesOfYear(app.year).forEach(ds => {
     const d = parseDate(ds);
-    if(d.getMonth() === monthIdx) return;
+    if(d.getMonth() !== monthIdx) return;
     if(d.getDay() !== 6 && d.getDay() !== 0) return;
     app.ides.forEach(ide2 => {
       if(isWorkCode((app.planning[ide2.id]||{})[ds])) weCount[ide2.id]++;
@@ -2239,7 +2239,11 @@ function regenIdeMonth(ideId, monthIdx) {
     const satD = wk.find(d => parseDate(d).getDay() === 6);
     const sunD = wk.find(d => parseDate(d).getDay() === 0);
     if(!satD && !sunD) { weAssignments[wkIdx] = new Set(); return; }
-    const available = app.ides.filter(() => true);
+    const available = app.ides.filter(ide => {
+      const satLock = satD && app.planning[ide.id] && LOCKED_CODES.has(app.planning[ide.id][satD]);
+      const sunLock = sunD && app.planning[ide.id] && LOCKED_CODES.has(app.planning[ide.id][sunD]);
+      return !satLock || !sunLock; // disponible si au moins un jour est libre
+    });
     available.sort((a, b) => (weCount[a.id] - weCount[b.id]) || (a.id - b.id));
     const workers = new Set();
     const needed = Math.min(app.minIdePerjour, available.length);
@@ -2824,7 +2828,7 @@ function _ideRenderPlanning(container) {
 
     // Code badge
     const badge = document.createElement('div');
-    const badgeBg = codeInfo.color || (code ? '#334155' : 'transparent');
+    const badgeBg = codeInfo.bg || (code ? '#334155' : 'transparent');
     badge.style.cssText = 'width:48px;flex-shrink:0;text-align:center;padding:.3rem .2rem;border-radius:8px;background:' + badgeBg + ';margin:0 .75rem;';
     const badgeCode = document.createElement('div');
     badgeCode.style.cssText = 'font-size:.85rem;font-weight:700;color:#f1f5f9;';
