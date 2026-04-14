@@ -1876,17 +1876,46 @@ function renderSettings() {
 
   // Codes list
   const cel = document.getElementById('codes-list');
-  cel.innerHTML = Object.keys(app.codes).map(k => {
+  cel.textContent = '';
+  Object.keys(app.codes).forEach(k => {
     const c = app.codes[k];
-    return `
-    <div class="tag-item">
-      <div class="tag-badge" style="background:${c.bg};color:${c.text};">${k}</div>
-      <div class="tag-desc">${c.label}</div>
-      <span class="badge badge-blue">${c.type}</span>
-      ${c.hours?`<span class="badge badge-green">${c.hours}h</span>`:''}
-      <button class="btn" style="padding:2px 6px;font-size:11px;" onclick="removeCode('${k}')">✕</button>
-    </div>`;
-  }).join('');
+    const div = document.createElement('div');
+    div.className = 'tag-item';
+
+    const badge = document.createElement('div');
+    badge.className = 'tag-badge';
+    badge.style.background = c.bg;
+    badge.style.color = c.text;
+    badge.textContent = k;
+
+    const desc = document.createElement('div');
+    desc.className = 'tag-desc';
+    desc.textContent = c.label;
+
+    const typeSpan = document.createElement('span');
+    typeSpan.className = 'badge badge-blue';
+    typeSpan.textContent = c.type;
+
+    div.appendChild(badge);
+    div.appendChild(desc);
+    div.appendChild(typeSpan);
+
+    if (c.hours) {
+      const hSpan = document.createElement('span');
+      hSpan.className = 'badge badge-green';
+      hSpan.textContent = c.hours + 'h';
+      div.appendChild(hSpan);
+    }
+
+    const btn = document.createElement('button');
+    btn.className = 'btn';
+    btn.style.cssText = 'padding:2px 6px;font-size:11px;';
+    btn.textContent = '✕';
+    btn.addEventListener('click', () => removeCode(k));
+    div.appendChild(btn);
+
+    cel.appendChild(div);
+  });
 }
 
 // =============================
@@ -1901,12 +1930,18 @@ function openCellModal(ideId, ds) {
 
   // Build code picker
   const picker = document.getElementById('code-picker');
-  picker.innerHTML = Object.keys(app.codes).map(k => {
+  picker.textContent = '';
+  Object.keys(app.codes).forEach(k => {
     const c = app.codes[k];
-    return `<button class="code-btn ${app.selectedCode===k?'selected':''}"
-      style="background:${c.bg};color:${c.text};border-color:${c.text}44;"
-      onclick="selectCellCode('${k}')">${k}</button>`;
-  }).join('');
+    const btn = document.createElement('button');
+    btn.className = 'code-btn' + (app.selectedCode === k ? ' selected' : '');
+    btn.style.background = c.bg;
+    btn.style.color = c.text;
+    btn.style.borderColor = c.text + '44';
+    btn.textContent = k;
+    btn.addEventListener('click', () => selectCellCode(k));
+    picker.appendChild(btn);
+  });
 
   document.getElementById('cell-code-manual').value = app.selectedCode;
   updateCellPreview();
