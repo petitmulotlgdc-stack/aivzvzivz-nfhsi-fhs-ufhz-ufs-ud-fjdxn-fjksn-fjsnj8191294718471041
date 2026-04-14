@@ -1277,17 +1277,27 @@ function runGeneration() {
         const satD = wk.find(d => parseDate(d).getDay() === 6);
         const sunD = wk.find(d => parseDate(d).getDay() === 0);
         if (!satD && !sunD) { weAssignments[wkIdx] = new Set(); return; }
-        // IDEs disponibles : pas verrouillées sur les deux jours du WE
-        const available = app.ides.filter(ide => {
-          const satLock = satD && locked[ide.id] && locked[ide.id][satD];
-          const sunLock = sunD && locked[ide.id] && locked[ide.id][sunD];
-          return !satLock || !sunLock; // disponible si au moins un jour est libre
-        });
+        const needed = Math.min(app.minIdePerjour, app.ides.length);
+        // Filtre avec contrainte 1WE/3 : essayer gap=2, puis gap=1, puis sans contrainte
+        let available = [];
+        for (let gap = 2; gap >= 0; gap--) {
+          available = app.ides.filter(ide => {
+            const satLock = satD && locked[ide.id] && locked[ide.id][satD];
+            const sunLock = sunD && locked[ide.id] && locked[ide.id][sunD];
+            if (satLock && sunLock) return false;
+            // Vérifier qu'elle n'a pas travaillé les <gap> derniers WE
+            for (let g = 1; g <= gap; g++) {
+              const prev = weAssignments[wkIdx - g];
+              if (prev && prev.has(ide.id)) return false;
+            }
+            return true;
+          });
+          if (available.length >= needed) break;
+        }
         // Trier par nb de WE travaillés (croissant), à égalité par id
         available.sort((a, b) => (weCount[a.id] - weCount[b.id]) || (a.id - b.id));
         const workers = new Set();
-        const needed = Math.min(app.minIdePerjour, available.length);
-        for (let i = 0; i < needed; i++) {
+        for (let i = 0; i < Math.min(needed, available.length); i++) {
           workers.add(available[i].id);
           weCount[available[i].id]++;
         }
@@ -2262,20 +2272,53 @@ function regenIdeMonth(ideId, monthIdx) {
     });
   });
 
+  // Vérifie si une IDE a travaillé un WE donné (par date du samedi/dimanche)
+  function ideWorkedWeekend(ide, refSatD, refSunD) {
+    const p = app.planning[ide.id] || {};
+    return (refSatD && isWorkCode(p[refSatD])) || (refSunD && isWorkCode(p[refSunD]));
+  }
+  // Retourne le samedi de la semaine N semaines avant refSat
+  function prevWeekSatSun(refSatD, refSunD, weeksBack) {
+    const ref = refSatD ? parseDate(refSatD) : parseDate(refSunD);
+    ref.setDate(ref.getDate() - 7 * weeksBack);
+    // ramener au samedi de cette semaine
+    while(ref.getDay() !== 6) ref.setDate(ref.getDate() - 1);
+    const s = dateStr(ref.getFullYear(), ref.getMonth(), ref.getDate());
+    const sun = new Date(ref); sun.setDate(sun.getDate() + 1);
+    const u = dateStr(sun.getFullYear(), sun.getMonth(), sun.getDate());
+    return { s, u };
+  }
+
   const weAssignments = {};
   monthWeeks.forEach((wk, wkIdx) => {
     const satD = wk.find(d => parseDate(d).getDay() === 6);
     const sunD = wk.find(d => parseDate(d).getDay() === 0);
     if(!satD && !sunD) { weAssignments[wkIdx] = new Set(); return; }
-    const available = app.ides.filter(ide => {
-      const satLock = satD && app.planning[ide.id] && LOCKED_CODES.has(app.planning[ide.id][satD]);
-      const sunLock = sunD && app.planning[ide.id] && LOCKED_CODES.has(app.planning[ide.id][sunD]);
-      return !satLock || !sunLock; // disponible si au moins un jour est libre
-    });
+    const needed = Math.min(app.minIdePerjour, app.ides.length);
+    // Filtre avec contrainte 1WE/3 : essayer gap=2, puis gap=1, puis sans contrainte
+    let available = [];
+    for(let gap = 2; gap >= 0; gap--) {
+      available = app.ides.filter(ide => {
+        const satLock = satD && app.planning[ide.id] && LOCKED_CODES.has(app.planning[ide.id][satD]);
+        const sunLock = sunD && app.planning[ide.id] && LOCKED_CODES.has(app.planning[ide.id][sunD]);
+        if(satLock && sunLock) return false;
+        for(let g = 1; g <= gap; g++) {
+          // Semaines déjà traitées ce mois-ci
+          if(wkIdx - g >= 0 && weAssignments[wkIdx - g]) {
+            if(weAssignments[wkIdx - g].has(ide.id)) return false;
+          } else {
+            // Semaines avant le mois : lire app.planning
+            const { s, u } = prevWeekSatSun(satD, sunD, g);
+            if(ideWorkedWeekend(ide, s, u)) return false;
+          }
+        }
+        return true;
+      });
+      if(available.length >= needed) break;
+    }
     available.sort((a, b) => (weCount[a.id] - weCount[b.id]) || (a.id - b.id));
     const workers = new Set();
-    const needed = Math.min(app.minIdePerjour, available.length);
-    for(let i=0; i<needed; i++) { workers.add(available[i].id); weCount[available[i].id]++; }
+    for(let i=0; i<Math.min(needed, available.length); i++) { workers.add(available[i].id); weCount[available[i].id]++; }
     weAssignments[wkIdx] = workers;
   });
 
