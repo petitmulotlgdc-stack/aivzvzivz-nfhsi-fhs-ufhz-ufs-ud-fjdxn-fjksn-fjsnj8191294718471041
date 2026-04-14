@@ -2705,6 +2705,7 @@ function renderRequestsCadre(reqs) {
     const header = document.createElement('div');
     header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;';
     const title = document.createElement('b');
+    title.style.color = '#f1f5f9';
     title.textContent = r.ide_name + ' — ' + r.date_str;
     const statusSpan = document.createElement('span');
     if (r.status === 'pending') { statusSpan.style.color = '#f59e0b'; statusSpan.textContent = 'En attente'; }
