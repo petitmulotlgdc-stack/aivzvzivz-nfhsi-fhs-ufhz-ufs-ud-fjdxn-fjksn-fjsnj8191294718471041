@@ -1,0 +1,3093 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Planning IDE — Médecine</title>
+<style>
+:root {
+  --bg: #f5f4f0;
+  --surface: #ffffff;
+  --surface2: #f0eeea;
+  --border: #dddbd6;
+  --border2: #ccc9c3;
+  --text: #1a1916;
+  --text2: #5a5855;
+  --text3: #9a9895;
+  --accent: #1a5c8a;
+  --accent-light: #e6f0f7;
+  --accent2: #2e7d52;
+  --accent2-light: #e6f3ec;
+  --warn: #b85c00;
+  --warn-light: #fef3e6;
+  --danger: #a02020;
+  --danger-light: #fdeaea;
+  --success: #2e7d52;
+  --radius: 6px;
+  --radius-lg: 10px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.07);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'DM Sans', 'Helvetica Neue', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  min-height: 100vh;
+}
+
+/* HEADER */
+.app-header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 56px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.app-logo {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+  color: var(--accent);
+}
+.app-logo span { color: var(--text3); font-weight: 400; }
+.header-tabs {
+  display: flex;
+  gap: 2px;
+  margin-left: 16px;
+}
+.header-tab {
+  padding: 6px 14px;
+  border-radius: var(--radius);
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text2);
+  transition: all 0.15s;
+}
+.header-tab:hover { background: var(--surface2); color: var(--text); }
+.header-tab.active { background: var(--accent-light); color: var(--accent); font-weight: 500; }
+.header-right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+.btn {
+  padding: 7px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border2);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.btn:hover { background: var(--surface2); }
+.btn-primary {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+.btn-primary:hover { background: #154d75; }
+.btn-success {
+  background: var(--accent2);
+  color: white;
+  border-color: var(--accent2);
+}
+.btn-success:hover { background: #246342; }
+.btn-danger { background: var(--danger); color: white; border-color: var(--danger); }
+.btn-danger:hover { background: #8a1818; }
+
+/* LAYOUT */
+.app-body { display: flex; height: calc(100vh - 56px); }
+.sidebar {
+  width: 280px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+.main-content { flex: 1; overflow: auto; }
+
+/* SIDEBAR */
+.sidebar-section {
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.sidebar-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text3);
+  margin-bottom: 10px;
+}
+.ide-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background 0.12s;
+  margin-bottom: 3px;
+}
+.ide-card:hover { background: var(--surface2); }
+.ide-card.selected { background: var(--accent-light); }
+.ide-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.ide-info { flex: 1; min-width: 0; }
+.ide-name { font-size: 13px; font-weight: 500; }
+.ide-balance {
+  font-size: 11px;
+  color: var(--text3);
+}
+.balance-ok { color: var(--success); }
+.balance-warn { color: var(--warn); }
+.balance-danger { color: var(--danger); }
+
+/* STATS MINI */
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+.stat-row:last-child { border-bottom: none; }
+.stat-label { color: var(--text2); }
+.stat-value { font-weight: 500; }
+.stat-ok { color: var(--success); }
+.stat-warn { color: var(--warn); }
+.stat-danger { color: var(--danger); }
+
+/* PLANNING GRID */
+.planning-wrapper {
+  padding: 20px;
+}
+.planning-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.year-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.year-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border2);
+  background: var(--surface);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: var(--text2);
+}
+.year-btn:hover { background: var(--surface2); }
+.year-label { font-size: 18px; font-weight: 600; min-width: 60px; text-align: center; }
+
+.view-toggle {
+  display: flex;
+  background: var(--surface2);
+  border-radius: var(--radius);
+  padding: 2px;
+  gap: 2px;
+}
+.view-btn {
+  padding: 5px 12px;
+  border-radius: calc(var(--radius) - 2px);
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text2);
+  transition: all 0.12s;
+}
+.view-btn.active { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+
+/* MONTH GRID */
+.month-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+.month-card {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.month-header {
+  background: var(--text);
+  color: white;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.month-header .month-stats {
+  font-size: 11px;
+  font-weight: 400;
+  opacity: 0.7;
+}
+
+.grid-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.grid-table th {
+  padding: 6px 4px;
+  text-align: center;
+  font-weight: 500;
+  color: var(--text3);
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  min-width: 36px;
+}
+.grid-table th.day-sun, .grid-table th.day-sat { color: var(--danger); }
+.grid-table td {
+  padding: 2px;
+  text-align: center;
+  vertical-align: middle;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.grid-table td:last-child { border-right: none; }
+.grid-table tr:last-child td { border-bottom: none; }
+.ide-row-label {
+  padding: 4px 10px;
+  text-align: left !important;
+  font-weight: 500;
+  font-size: 11px;
+  color: var(--text2);
+  white-space: nowrap;
+  min-width: 100px;
+  background: var(--surface2);
+  position: sticky;
+  left: 0;
+}
+
+/* CELLS */
+.cell {
+  min-width: 32px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 600;
+  transition: all 0.1s;
+  margin: 1px;
+  letter-spacing: -0.3px;
+  position: relative;
+}
+.cell:hover { filter: brightness(0.92); transform: scale(1.05); }
+.cell.work { background: #dbeeff; color: #1a5c8a; }
+.cell.work-j05 { background: #d4edda; color: #1a5c3a; }
+.cell.work-js2 { background: #e8d5f7; color: #5a1a8a; }
+.cell.work-j10 { background: #fde8d0; color: #8a3a00; }
+.cell.rest-rh { background: var(--surface2); color: var(--text3); }
+.cell.conge-ca { background: #fff3cd; color: #856404; }
+.cell.conge-type { background: #fff3cd; color: #856404; }
+.cell.recuper { background: #d4edda; color: #155724; font-size: 16px; }
+.cell.ferie { background: #f8d7da; color: #721c24; }
+.cell.absence { background: #f5c6cb; color: #721c24; }
+.cell.tp { background: #e2d9f3; color: #4a1a8a; }
+.cell.formation { background: #d1ecf1; color: #0c5460; }
+.cell.empty { background: none; cursor: default; }
+.cell.weekend { opacity: 0.85; }
+.cell.constraint-error { outline: 2px solid var(--danger); }
+.cell.constraint-warn { outline: 2px solid var(--warn); }
+
+/* COVERAGE BAR */
+.coverage-row td {
+  padding: 2px 2px;
+}
+.coverage-cell {
+  height: 14px;
+  border-radius: 3px;
+  font-size: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  margin: 1px;
+}
+.cov-ok { background: var(--accent2-light); color: var(--accent2); }
+.cov-under { background: var(--danger-light); color: var(--danger); }
+.cov-over { background: var(--warn-light); color: var(--warn); }
+
+/* MODALS */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.modal {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.modal-header {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.modal-title { font-size: 16px; font-weight: 600; }
+.modal-close {
+  width: 28px; height: 28px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border2);
+  background: none;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text2);
+}
+.modal-body { padding: 20px 24px; }
+.modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* FORMS */
+.form-group { margin-bottom: 14px; }
+.form-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text2);
+  margin-bottom: 5px;
+}
+.form-input, .form-select {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border2);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+}
+.form-input:focus, .form-select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-light);
+}
+
+/* CODE PICKER */
+.code-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-top: 8px;
+}
+.code-btn {
+  padding: 8px 4px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border2);
+  background: var(--surface);
+  cursor: pointer;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  transition: all 0.12s;
+}
+.code-btn:hover { transform: scale(1.04); filter: brightness(0.95); }
+.code-btn.selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-light); }
+
+/* ALERTS */
+.alert {
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  font-size: 12px;
+  margin-bottom: 10px;
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+.alert-danger { background: var(--danger-light); color: var(--danger); border: 1px solid #f5c6cb; }
+.alert-warn { background: var(--warn-light); color: var(--warn); border: 1px solid #ffe5c0; }
+.alert-success { background: var(--accent2-light); color: var(--accent2); border: 1px solid #c3e6cb; }
+.alert-info { background: var(--accent-light); color: var(--accent); border: 1px solid #b8d8ee; }
+
+/* PROGRESS */
+.progress-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--surface2);
+  overflow: hidden;
+  margin-top: 3px;
+}
+.progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--accent);
+  transition: width 0.3s;
+}
+.progress-fill.over { background: var(--danger); }
+.progress-fill.near { background: var(--warn); }
+.progress-fill.good { background: var(--accent2); }
+
+/* TABS PANEL */
+.tab-panels { }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* SETTINGS PAGE */
+.settings-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  padding: 20px;
+}
+.settings-card {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  padding: 20px;
+}
+.settings-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.ide-list-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.ide-list-item:last-child { border-bottom: none; }
+.tag-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+.tag-item:last-child { border-bottom: none; }
+.tag-badge {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  min-width: 50px;
+  text-align: center;
+}
+.tag-desc { font-size: 12px; color: var(--text2); flex: 1; }
+.color-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* GENERATION MODAL */
+.gen-step {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.gen-step:last-child { border-bottom: none; }
+.gen-step-num {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: white;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.gen-step-num.done { background: var(--success); }
+.gen-step-num.pending { background: var(--surface2); color: var(--text3); }
+.gen-step-content { flex: 1; }
+.gen-step-title { font-size: 13px; font-weight: 500; }
+.gen-step-desc { font-size: 11px; color: var(--text2); margin-top: 2px; }
+
+/* RESPONSIVE SCROLL */
+.table-scroll { overflow-x: auto; }
+
+/* TOOLTIP */
+.tooltip-container { position: relative; }
+.tooltip {
+  position: absolute;
+  bottom: 110%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--text);
+  color: white;
+  padding: 4px 8px;
+  border-radius: var(--radius);
+  font-size: 10px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 99;
+}
+.tooltip-container:hover .tooltip { opacity: 1; }
+
+/* BADGE */
+.badge {
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+}
+.badge-blue { background: var(--accent-light); color: var(--accent); }
+.badge-green { background: var(--accent2-light); color: var(--accent2); }
+.badge-orange { background: var(--warn-light); color: var(--warn); }
+.badge-red { background: var(--danger-light); color: var(--danger); }
+
+/* VIOLATIONS PANEL */
+.violations-list { }
+.violation-item {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+.violation-item:last-child { border-bottom: none; }
+.vi-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+
+/* Print */
+@media print {
+  .sidebar, .app-header, .planning-controls { display: none; }
+  .main-content { overflow: visible; }
+}
+</style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1a5c8a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="PlanningIDE">
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen" style="display:none;position:fixed;inset:0;z-index:9999;background:#0f172a;align-items:center;justify-content:center;">
+  <div style="background:#1e293b;border-radius:16px;padding:2rem;width:340px;box-shadow:0 8px 32px rgba(0,0,0,.6);">
+    <div style="text-align:center;margin-bottom:1.5rem;">
+      <h2 style="color:#f1f5f9;font-size:1.25rem;font-weight:700;margin:0;">PlanningIDE</h2>
+      <p style="color:#64748b;font-size:.8rem;margin:.25rem 0 0;">Médecine 2</p>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Email</label>
+      <input class="form-input" id="login-email" type="email" placeholder="prenom@hopital.fr" autocomplete="username" style="font-size:16px;">
+    </div>
+    <div class="form-group" style="margin-top:.75rem;">
+      <label class="form-label">Mot de passe</label>
+      <input class="form-input" id="login-password" type="password" autocomplete="current-password" style="font-size:16px;" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div style="display:flex;align-items:center;gap:.5rem;margin-top:.75rem;">
+      <input type="checkbox" id="login-remember" checked style="width:16px;height:16px;cursor:pointer;">
+      <label for="login-remember" style="color:#94a3b8;font-size:.85rem;cursor:pointer;">Rester connecté</label>
+    </div>
+    <div id="login-error" style="color:#f87171;font-size:.8rem;margin-top:.5rem;min-height:1rem;"></div>
+    <button class="btn btn-primary" onclick="doLogin()" style="width:100%;margin-top:1rem;padding:.75rem;font-size:1rem;">Connexion</button>
+  </div>
+</div>
+
+<!-- IDE PERSONAL VIEW -->
+<div id="ide-view" style="display:none;min-height:100vh;background:#0f172a;color:#f1f5f9;"></div>
+
+<!-- LOADING SCREEN -->
+<div id="loading-screen" style="display:flex;position:fixed;inset:0;z-index:9998;background:#0f172a;align-items:center;justify-content:center;flex-direction:column;gap:1rem;">
+  <div style="width:36px;height:36px;border:3px solid #334155;border-top-color:#38bdf8;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+  <div style="color:#64748b;font-size:.85rem;">Chargement...</div>
+</div>
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+
+<!-- APP ROOT -->
+<div id="app-root" style="display:none;flex-direction:column;height:100vh;">
+
+<!-- APP HEADER -->
+<header class="app-header">
+  <div class="app-logo">PlanningIDE <span>/ Médecine 2</span></div>
+  <nav class="header-tabs">
+    <button class="header-tab active" onclick="switchTab('planning')">Planning</button>
+    <button class="header-tab" onclick="switchTab('dashboard')">Tableau de bord</button>
+    <button class="header-tab" onclick="switchTab('settings')">Paramètres</button>
+    <button class="header-tab" onclick="switchTab('requests')" id="tab-btn-requests" style="display:none;">
+      Requêtes <span id="requests-badge" style="display:none;background:var(--danger);color:white;border-radius:999px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px;"></span>
+    </button>
+  </nav>
+  <div class="header-right">
+    <span id="user-info" style="font-size:12px;color:var(--text3);"></span>
+    <button class="btn btn-success" id="publish-btn" onclick="publishPlanning()" style="display:none;">&#8593; Publier</button>
+    <button class="btn btn-danger" onclick="clearGeneration()" style="font-size:12px;">✕ Supprimer</button>
+    <button class="btn" onclick="showGenerateModal()">⚡ Auto-générer</button>
+    <button class="btn btn-primary" onclick="exportPlanning()">&#8595; Exporter</button>
+    <button class="btn" onclick="doLogout()" id="logout-btn" style="display:none;font-size:12px;">Déconnexion</button>
+  </div>
+</header>
+
+<!-- APP BODY -->
+<div class="app-body">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-title">Année</div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button class="year-btn" onclick="changeYear(-1)">‹</button>
+        <span class="year-label" id="sidebar-year">2026</span>
+        <button class="year-btn" onclick="changeYear(1)">›</button>
+        <select class="form-select" style="margin-left:auto;width:auto;padding:4px 8px;font-size:12px;" onchange="changeMonth(this.value)" id="month-select">
+          <option value="-1">Toute l'année</option>
+          <option value="0">Janvier</option><option value="1">Février</option><option value="2">Mars</option>
+          <option value="3">Avril</option><option value="4">Mai</option><option value="5">Juin</option>
+          <option value="6">Juillet</option><option value="7">Août</option><option value="8">Septembre</option>
+          <option value="9">Octobre</option><option value="10">Novembre</option><option value="11">Décembre</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-title">IDE <button class="btn" style="float:right;padding:2px 8px;font-size:11px;" onclick="showAddIdeModal()">+ Ajouter</button></div>
+      <div id="ide-list"></div>
+    </div>
+
+    <div class="sidebar-section" id="selected-ide-stats" style="display:none;">
+      <div class="sidebar-title">Solde <span id="stats-ide-name" style="text-transform:none;letter-spacing:0;color:var(--text);font-weight:600;"></span></div>
+      <div id="ide-stats-content"></div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-title">Violations</div>
+      <div id="violations-summary"></div>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content">
+
+    <!-- PLANNING TAB -->
+    <div id="tab-planning" class="tab-panel active">
+      <div class="planning-wrapper">
+        <div class="planning-controls">
+          <div class="view-toggle"></div>
+          <div style="flex:1;"></div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;" id="legend"></div>
+        </div>
+        <div id="planning-content"></div>
+      </div>
+    </div>
+
+    <!-- DASHBOARD TAB -->
+    <div id="tab-dashboard" class="tab-panel">
+      <div style="padding:20px;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:20px;" id="dashboard-cards"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div class="settings-card">
+            <div class="settings-card-title">Couverture journalière</div>
+            <div id="coverage-chart" style="font-size:11px;color:var(--text2);">Générer le planning pour voir la couverture.</div>
+          </div>
+          <div class="settings-card">
+            <div class="settings-card-title">Violations de contraintes</div>
+            <div class="violations-list" id="violations-detail"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETTINGS TAB -->
+    <div id="tab-settings" class="tab-panel">
+      <div style="padding:20px;max-width:900px;">
+
+        <!-- Paramètres généraux -->
+        <div class="settings-card" style="margin-bottom:16px;">
+          <div class="settings-card-title">Paramètres généraux</div>
+          <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;">
+            <div class="form-group" style="margin:0;">
+              <label class="form-label">Année</label>
+              <input type="number" class="form-input" id="setting-year" value="2026" style="width:100px;"
+                onchange="app.year=parseInt(this.value);refreshAll();">
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label class="form-label">IDE min / jour</label>
+              <input type="number" class="form-input" id="setting-min" value="2" min="1" max="10" style="width:80px;"
+                onchange="app.minIdePerjour=parseInt(this.value)||2;">
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label class="form-label">Fréq. WE travaillé (1 sur N)</label>
+              <input type="number" class="form-input" id="setting-we" value="3" min="1" max="10" style="width:80px;"
+                onchange="app.weFreq=parseInt(this.value)||3;">
+            </div>
+          </div>
+        </div>
+
+        <!-- Roulements -->
+        <div class="settings-card" style="margin-bottom:16px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+            <div class="settings-card-title" style="margin:0;">Roulements</div>
+            <button class="btn btn-primary" style="font-size:12px;padding:4px 12px;" onclick="showAddRoulementModal()">+ Ajouter</button>
+          </div>
+          <div id="roulements-list"></div>
+        </div>
+
+        <!-- IDE -->
+        <div class="settings-card" style="margin-bottom:16px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+            <div class="settings-card-title" style="margin:0;">Infirmières (IDE)</div>
+            <button class="btn btn-primary" style="font-size:12px;padding:4px 12px;" onclick="showAddIdeModal()">+ Ajouter</button>
+          </div>
+          <div id="settings-ide-list"></div>
+        </div>
+
+        <!-- Codes -->
+        <div class="settings-card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+            <div class="settings-card-title" style="margin:0;">Codes d'affectation</div>
+            <button class="btn btn-primary" style="font-size:12px;padding:4px 12px;" onclick="showAddCodeModal()">+ Ajouter</button>
+          </div>
+          <div id="codes-list" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+        </div>
+
+      </div>
+    </div>
+
+  <div id="tab-requests" class="tab-panel">
+    <div id="requests-content" style="padding:1rem;">
+      <p style="color:#888;text-align:center;padding:2rem;">Chargement des requetes...</p>
+    </div>
+  </div>
+
+  </main>
+</div>
+
+<!-- ===== MODALS ===== -->
+
+<!-- CELL EDIT MODAL -->
+<div class="overlay" id="cell-modal" style="display:none;">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="cell-modal-title">Modifier l'affectation</div>
+      <button class="modal-close" onclick="closeModal('cell-modal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="cell-modal-alerts"></div>
+      <div class="form-group">
+        <label class="form-label">Code d'affectation</label>
+        <div class="code-grid" id="code-picker"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Ou saisir manuellement</label>
+        <input type="text" class="form-input" id="cell-code-manual" placeholder="Ex: JM2, CA, RH…" oninput="manualCodeInput(this.value)">
+      </div>
+      <div id="cell-preview" style="margin-top:8px;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" onclick="clearCell()">Effacer</button>
+      <button class="btn" onclick="closeModal('cell-modal')">Annuler</button>
+      <button class="btn btn-primary" onclick="confirmCell()">Appliquer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD IDE MODAL -->
+<div class="overlay" id="ide-modal" style="display:none;">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="ide-modal-title">Ajouter une IDE</div>
+      <button class="modal-close" onclick="closeModal('ide-modal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Nom complet</label>
+        <input type="text" class="form-input" id="ide-name-input" placeholder="Ex: DUPONT Marie">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Initiales (affichage)</label>
+        <input type="text" class="form-input" id="ide-short-input" placeholder="Ex: DM" maxlength="4">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Temps de travail (%)</label>
+        <select class="form-select" id="ide-pct-input">
+          <option value="100">100% — 1757h/an</option>
+          <option value="80">80% — 1405h/an</option>
+          <option value="90">90% — 1581h/an</option>
+          <option value="70">70% — 1230h/an</option>
+          <option value="50">50% — 878h/an</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Roulement</label>
+        <select class="form-select" id="ide-roulement-input"></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Offset de départ (position dans le cycle)</label>
+        <input type="number" class="form-input" id="ide-offset-input" value="0" min="0" max="10">
+        <div style="font-size:11px;color:var(--text3);margin-top:3px;">0 = début du cycle · 1 = 2e code · etc.</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Couleur avatar</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;" id="avatar-color-picker"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('ide-modal')">Annuler</button>
+      <button class="btn btn-primary" onclick="confirmAddIde()">Ajouter</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD CODE MODAL -->
+<div class="overlay" id="code-modal" style="display:none;">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-header">
+      <div class="modal-title">Ajouter un code</div>
+      <button class="modal-close" onclick="closeModal('code-modal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Code (ex: JM2)</label>
+        <input type="text" class="form-input" id="new-code-key" placeholder="JM2" maxlength="6" oninput="this.value=this.value.toUpperCase()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Libellé</label>
+        <input type="text" class="form-input" id="new-code-label" placeholder="06h45-18h45 (12h)">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Type</label>
+        <select class="form-select" id="new-code-type">
+          <option value="work">Travail (compte comme poste actif)</option>
+          <option value="rh">Repos hebdomadaire</option>
+          <option value="ca">Congé annuel</option>
+          <option value="recuper">Repos compensateur</option>
+          <option value="tp">Temps partiel</option>
+          <option value="ferie">Férié</option>
+          <option value="absence">Absence</option>
+          <option value="formation">Formation</option>
+          <option value="autre">Autre</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Durée (heures, si poste de travail)</label>
+        <input type="number" class="form-input" id="new-code-hours" value="12" min="0" max="24" step="0.25">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Couleur d'affichage</label>
+        <input type="color" id="new-code-color" value="#dbeeff" style="width:60px;height:32px;border-radius:6px;border:1px solid var(--border2);cursor:pointer;">
+        <input type="color" id="new-code-textcolor" value="#1a5c8a" style="width:60px;height:32px;border-radius:6px;border:1px solid var(--border2);cursor:pointer;margin-left:8px;">
+        <span style="font-size:11px;color:var(--text3);display:block;margin-top:4px;">Fond / Texte</span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('code-modal')">Annuler</button>
+      <button class="btn btn-primary" onclick="confirmAddCode()">Ajouter</button>
+    </div>
+  </div>
+</div>
+
+<!-- ROULEMENT MODAL -->
+<div class="overlay" id="roulement-modal" style="display:none;">
+  <div class="modal" style="max-width:460px;">
+    <div class="modal-header">
+      <div class="modal-title" id="roulement-modal-title">Nouveau roulement</div>
+      <button class="modal-close" onclick="closeModal('roulement-modal')">&#215;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Nom du roulement</label>
+        <input type="text" class="form-input" id="roulement-name-input" placeholder="Ex: Roulement A">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Cycle de postes (codes s&#233;par&#233;s par des virgules)</label>
+        <input type="text" class="form-input" id="roulement-cycle-input" placeholder="JM2,JM2,JS2,JS2" oninput="this.value=this.value.toUpperCase()">
+        <div style="font-size:11px;color:var(--text3);margin-top:4px;">Uniquement des codes de type travail. Le cycle se r&#233;p&#232;te ind&#233;finiment.</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('roulement-modal')">Annuler</button>
+      <button class="btn btn-primary" onclick="confirmRoulement()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- REGEN MONTH MODAL -->
+<div class="overlay" id="regen-month-modal" style="display:none;">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-header">
+      <div class="modal-title" id="regen-month-title">Régénérer ce mois</div>
+      <button class="modal-close" onclick="closeModal('regen-month-modal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-warn">
+        <span>⚠</span>
+        <div id="regen-month-desc">Les affectations générées pour ce mois seront recalculées. Les CA et absences sont préservés.</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('regen-month-modal')">Annuler</button>
+      <button class="btn btn-success" onclick="confirmRegenMonth()">Régénérer</button>
+    </div>
+  </div>
+</div>
+
+<!-- GENERATE MODAL -->
+<div class="overlay" id="gen-modal" style="display:none;">
+  <div class="modal" style="max-width:500px;">
+    <div class="modal-header">
+      <div class="modal-title">⚡ Génération automatique</div>
+      <button class="modal-close" onclick="closeModal('gen-modal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-warn">
+        <span>⚠</span>
+        <div>Cette action va <strong>recalculer</strong> les affectations (hors CA déjà saisis). Les modifications manuelles seront écrasées.</div>
+      </div>
+      <div id="gen-steps">
+        <div class="gen-step"><div class="gen-step-num">1</div><div class="gen-step-content"><div class="gen-step-title">Verrouillage des CA</div><div class="gen-step-desc">Les congés annuels existants sont préservés.</div></div></div>
+        <div class="gen-step"><div class="gen-step-num">2</div><div class="gen-step-content"><div class="gen-step-title">Placement des RH (104/an)</div><div class="gen-step-desc">2 repos hebdomadaires par semaine, dont le week-end 1 sur 3.</div></div></div>
+        <div class="gen-step"><div class="gen-step-num">3</div><div class="gen-step-content"><div class="gen-step-title">Placement des postes de travail</div><div class="gen-step-desc">Séquences de 2 jours consécutifs, rotations JM2/JS2/J05/J10.</div></div></div>
+        <div class="gen-step"><div class="gen-step-num">4</div><div class="gen-step-content"><div class="gen-step-title">Calcul des repos compensateurs</div><div class="gen-step-desc">Ajustement pour équilibrer la balance horaire cible.</div></div></div>
+        <div class="gen-step"><div class="gen-step-num">5</div><div class="gen-step-content"><div class="gen-step-title">Placement des TP (temps partiel)</div><div class="gen-step-desc">Pour les IDE à temps partiel (~3 TP / 4 semaines).</div></div></div>
+        <div class="gen-step"><div class="gen-step-num">6</div><div class="gen-step-content"><div class="gen-step-title">Vérification de la couverture</div><div class="gen-step-desc">Ajustements pour garantir 2 IDE actives par jour.</div></div></div>
+      </div>
+      <div id="gen-progress" style="display:none;margin-top:16px;">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:6px;" id="gen-progress-label">Génération en cours…</div>
+        <div class="progress-bar"><div class="progress-fill" id="gen-progress-bar" style="width:0%"></div></div>
+      </div>
+      <div id="gen-result" style="display:none;margin-top:12px;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('gen-modal')">Annuler</button>
+      <button class="btn btn-success" id="gen-btn" onclick="runGeneration()">Lancer la génération</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// =============================
+// STATE
+// =============================
+const MONTHS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+const DAYS_SHORT = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+const AVATAR_COLORS = [
+  {bg:'#dbeeff',text:'#1a5c8a'},
+  {bg:'#d4edda',text:'#1a5c3a'},
+  {bg:'#e8d5f7',text:'#5a1a8a'},
+  {bg:'#fde8d0',text:'#8a3a00'},
+  {bg:'#f8d7da',text:'#721c24'},
+  {bg:'#fff3cd',text:'#856404'},
+  {bg:'#d1ecf1',text:'#0c5460'},
+  {bg:'#f5e6ff',text:'#6a0dad'},
+];
+
+const app = {
+  year: 2026,
+  currentMonth: -1, // -1 = all
+  minIdePerjour: 2,
+  weFreq: 3,
+  currentView: 'month',
+  selectedIde: null,
+  editingCell: null,
+  selectedCode: null,
+  editingIdeIdx: null,
+  _regenTarget: null,
+
+  roulements: {
+    'R-A': { name: 'Roulement A', cycle: ['JM2','JM2','JS2','JS2'] },
+    'R-B': { name: 'Roulement B', cycle: ['JS2','JS2','J05','J05'] },
+    'R-C': { name: 'Roulement C', cycle: ['J05','J05','JM2','JM2'] },
+  },
+
+  ides: [
+    { id: 1, name: 'MAILLOT Lau.',       short: 'ML', pct: 100, color: AVATAR_COLORS[0], roulement: 'R-A', roulementOffset: 0 },
+    { id: 2, name: 'NTOYA Oté.',          short: 'NO', pct: 100, color: AVATAR_COLORS[1], roulement: 'R-B', roulementOffset: 0 },
+    { id: 3, name: 'PEREIRA San.',        short: 'PS', pct: 100, color: AVATAR_COLORS[2], roulement: 'R-C', roulementOffset: 0 },
+    { id: 4, name: 'LUKEMBELADIO Van.',   short: 'LV', pct: 100, color: AVATAR_COLORS[3], roulement: 'R-A', roulementOffset: 2 },
+    { id: 5, name: 'ROLLAND Cat.',        short: 'RC', pct: 80,  color: AVATAR_COLORS[4], roulement: 'R-B', roulementOffset: 2 },
+  ],
+
+  codes: {
+    'JM2': { label:'06h45-18h45 (12h)', type:'work', hours:12, bg:'#dbeeff', text:'#1a5c8a' },
+    'J05': { label:'07h00-19h00 (12h)', type:'work', hours:12, bg:'#d4edda', text:'#1a5c3a' },
+    'JS2': { label:'09h15-21h15 (12h)', type:'work', hours:12, bg:'#e8d5f7', text:'#5a1a8a' },
+    'J10': { label:'08h00-20h00 (12h)', type:'work', hours:12, bg:'#fde8d0', text:'#8a3a00' },
+    'RH':  { label:'Repos hebdomadaire', type:'rh', hours:0, bg:'#f0eeea', text:'#9a9895' },
+    'CA':  { label:'Congés annuels', type:'ca', hours:0, bg:'#fff3cd', text:'#856404' },
+    '-':   { label:'Repos compensateur', type:'recuper', hours:0, bg:'#d4edda', text:'#155724' },
+    'TP':  { label:'Temps partiel', type:'tp', hours:0, bg:'#e2d9f3', text:'#4a1a8a' },
+    'F':   { label:'Férié', type:'ferie', hours:0, bg:'#f8d7da', text:'#721c24' },
+    'AM':  { label:'Arrêt maladie', type:'absence', hours:0, bg:'#f5c6cb', text:'#721c24' },
+    'FCJ': { label:'Formation continue', type:'formation', hours:0, bg:'#d1ecf1', text:'#0c5460' },
+    'HS':  { label:'Congé hors saison', type:'ca', hours:0, bg:'#fff3cd', text:'#856404' },
+    'FR':  { label:'Fractionnement', type:'ca', hours:0, bg:'#fff3cd', text:'#856404' },
+    'RJF': { label:'Récup. jour férié', type:'recuper', hours:0, bg:'#d4edda', text:'#155724' },
+    'CA-1':{ label:'Congés annuels -1', type:'ca', hours:0, bg:'#fff3cd', text:'#856404' },
+    'CET': { label:'Compte épargne temps', type:'ca', hours:0, bg:'#fff3cd', text:'#856404' },
+    '?':   { label:'Absence à qualifier', type:'absence', hours:0, bg:'#f5c6cb', text:'#721c24' },
+  },
+
+  // planning[ideId][dateStr] = code
+  planning: {},
+};
+
+// =============================
+// HELPERS
+// =============================
+function dateStr(y, m, d) { return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; }
+function parseDate(s) { const p=s.split('-'); return new Date(+p[0],+p[1]-1,+p[2]); }
+function daysInMonth(y, m) { return new Date(y, m+1, 0).getDate(); }
+function dayOfWeek(y, m, d) { let dow=new Date(y,m,d).getDay(); return dow===0?6:dow-1; } // 0=Mon..6=Sun
+function isWeekend(y, m, d) { const dow=dayOfWeek(y,m,d); return dow===5||dow===6; }
+function isWorkCode(code) { return code && app.codes[code] && app.codes[code].type==='work'; }
+function getHours(code) { return (code && app.codes[code]) ? (app.codes[code].hours||0) : 0; }
+
+function targetHours(ide) { return Math.round(1757 * (ide.pct/100)); }
+function tpPerMonth(ide) { return ide.pct < 100 ? Math.round(3 * (100-ide.pct)/20) : 0; }
+
+function ideKey(ideId) { if(!app.planning[ideId]) app.planning[ideId]={}; return app.planning[ideId]; }
+
+function allDatesOfYear(y) {
+  const dates=[];
+  for(let m=0;m<12;m++) for(let d=1;d<=daysInMonth(y,m);d++) dates.push(dateStr(y,m,d));
+  return dates;
+}
+
+function frenchHolidays(y) {
+  const fixed = [
+    `${y}-01-01`,`${y}-05-01`,`${y}-05-08`,`${y}-07-14`,
+    `${y}-08-15`,`${y}-11-01`,`${y}-11-11`,`${y}-12-25`
+  ];
+  // Easter calculation (Oudin's algorithm)
+  const G=y%19, C=Math.floor(y/100), H=(C-Math.floor(C/4)-Math.floor((8*C+13)/25)+19*G+15)%30;
+  const I=H-Math.floor(H/28)*(1-Math.floor(29/(H+1))*Math.floor((21-G)/11));
+  const J=(y+Math.floor(y/4)+I+2-C+Math.floor(C/4))%7;
+  const L=I-J;
+  const easterMonth=3+Math.floor((L+40)/44);
+  const easterDay=L+28-31*Math.floor(easterMonth/4);
+  const easter = new Date(y, easterMonth-1, easterDay);
+  const lundi = new Date(easter); lundi.setDate(lundi.getDate()+1);
+  const ascension = new Date(easter); ascension.setDate(ascension.getDate()+39);
+  const pentecote = new Date(easter); pentecote.setDate(pentecote.getDate()+49);
+  const lundiPentecote = new Date(easter); lundiPentecote.setDate(lundiPentecote.getDate()+50);
+  [lundi,ascension,pentecote,lundiPentecote].forEach(d=>{
+    fixed.push(`${y}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+  });
+  return new Set(fixed);
+}
+
+// =============================
+// STATS PER IDE
+// =============================
+function computeStats(ide) {
+  const plan = app.planning[ide.id] || {};
+  const holidays = frenchHolidays(app.year);
+  let worked=0, workedH=0, rh=0, ca=0, ferie=0, recuper=0, rjf=0, tp=0, workedSundays=0;
+  const dates = allDatesOfYear(app.year);
+  dates.forEach(ds => {
+    const code = plan[ds];
+    if(!code) return;
+    const d = parseDate(ds);
+    if(isWorkCode(code)) {
+      worked++;
+      workedH += getHours(code);
+      if(d.getDay()===0) workedSundays++;
+    }
+    if(app.codes[code]) {
+      const t = app.codes[code].type;
+      if(t==='rh') rh++;
+      if(t==='ca') ca++;
+      if(t==='ferie') ferie++;
+      if(t==='recuper') { recuper++; if(code==='RJF') rjf++; }
+      if(t==='tp') tp++;
+    }
+  });
+  const target = targetHours(ide);
+  return { worked, workedH, rh, ca, ferie, recuper, rjf, tp, workedSundays, target,
+    balance: workedH - target, pct: Math.min(100, Math.round(workedH/target*100)) };
+}
+
+// =============================
+// VIOLATIONS
+// =============================
+function checkViolations() {
+  const violations = [];
+  const holidays = frenchHolidays(app.year);
+  const dates = allDatesOfYear(app.year);
+
+  app.ides.forEach(ide => {
+    const plan = app.planning[ide.id] || {};
+    // Coverage check done below
+    // Check: no more than 3 consecutive work days
+    let consecutive = 0;
+    dates.forEach((ds, i) => {
+      if(isWorkCode(plan[ds])) {
+        consecutive++;
+        if(consecutive > 3) violations.push({ide: ide.short, date: ds, type:'warn', msg:`${ide.short} : plus de 3 jours de travail consécutifs autour du ${ds}`});
+      } else { consecutive=0; }
+    });
+    // Check isolated work days
+    for(let i=1;i<dates.length-1;i++) {
+      const prev = plan[dates[i-1]], curr = plan[dates[i]], next = plan[dates[i+1]];
+      if(isWorkCode(curr) && !isWorkCode(prev) && !isWorkCode(next)) {
+        violations.push({ide: ide.short, date: dates[i], type:'warn', msg:`${ide.short} : jour de travail isolé le ${dates[i]}`});
+      }
+    }
+    // Check: max 4 jours travaillés sur toute fenêtre glissante de 7 jours
+    for(let i=0; i<dates.length-6; i++) {
+      const w7 = dates.slice(i, i+7);
+      const wc = w7.filter(ds => isWorkCode(plan[ds])).length;
+      if(wc > 4) {
+        violations.push({ide: ide.short, date: dates[i], type:'danger', msg:`${ide.short} : ${wc}j travaillés sur 7j glissants (max 4) à partir du ${dates[i]}`});
+        i += 6; // éviter les doublons pour la même période
+      }
+    }
+  });
+
+  // Coverage per day
+  dates.forEach(ds => {
+    let count = 0;
+    app.ides.forEach(ide => {
+      if(isWorkCode((app.planning[ide.id]||{})[ds])) count++;
+    });
+    if(count < app.minIdePerjour) {
+      const label = holidays.has(ds) ? ' (férié)' : '';
+      violations.push({ide:'ALL', date: ds, type:'danger', msg:`Couverture insuffisante le ${ds}${label} (${count}/${app.minIdePerjour} IDE)`});
+    }
+  });
+
+  return violations.slice(0, 50);
+}
+
+// =============================
+// GENERATION ALGORITHM (v2 — semaine par semaine, paires logiques)
+// =============================
+function runGeneration() {
+  const btn = document.getElementById('gen-btn');
+  btn.disabled = true;
+  document.getElementById('gen-progress').style.display = 'block';
+  document.getElementById('gen-result').style.display = 'none';
+  const bar = document.getElementById('gen-progress-bar');
+  const lbl = document.getElementById('gen-progress-label');
+  function prog(p, msg) { bar.style.width = p + '%'; lbl.textContent = msg; }
+
+  const holidays   = frenchHolidays(app.year);
+  const allDates   = allDatesOfYear(app.year);
+
+  // Codes que l'on ne touche jamais
+  const LOCKED_CODES = new Set([
+    'CA','CA-1','CET','HS','HS-1','FR','AM','FCJ','FCH','?','RJF','H-','H+P','H+R'
+  ]);
+
+  const WE_PLACEHOLDER = '__WE__'; // marqueur temporaire pour les jours WE à travailler
+
+  // ── Construction des semaines ISO (Lun–Dim) couvrant l'année ──────────
+  function buildWeeks() {
+    const weeks = [];
+    let cur = new Date(app.year, 0, 1);
+    while (cur.getDay() !== 1) cur.setDate(cur.getDate() - 1); // reculer au lundi
+    while (cur.getFullYear() <= app.year) {
+      const wk = [];
+      for (let d = 0; d < 7; d++) {
+        const dd = new Date(cur); dd.setDate(dd.getDate() + d);
+        if (dd.getFullYear() === app.year)
+          wk.push(dateStr(dd.getFullYear(), dd.getMonth(), dd.getDate()));
+      }
+      if (wk.length) weeks.push(wk);
+      cur.setDate(cur.getDate() + 7);
+    }
+    return weeks;
+  }
+
+  const weeks = buildWeeks();
+
+  setTimeout(() => {
+    prog(10, 'Verrouillage des congés et fériés…');
+
+    // ── Carte des jours verrouillés par IDE ───────────────────────────
+    const locked = {};
+    app.ides.forEach(ide => {
+      locked[ide.id] = {};
+      const prev = app.planning[ide.id] || {};
+      Object.keys(prev).forEach(ds => {
+        if (LOCKED_CODES.has(prev[ds])) locked[ide.id][ds] = true;
+      });
+    });
+
+    setTimeout(() => {
+      prog(35, 'Placement des RH et postes semaine par semaine…');
+
+      // ── Assignation greedy des week-ends ─────────────────────────────────
+      // Pour chaque WE, on choisit les N IDEs (N = minIdePerjour) qui ont
+      // travaillé le moins de week-ends jusqu'ici — garantit l'équité et
+      // la couverture sans collision de modulo entre IDEs.
+      const weCount = {};
+      app.ides.forEach(ide => { weCount[ide.id] = 0; });
+      const weAssignments = {}; // wkIdx → Set<ideId>
+      weeks.forEach((wk, wkIdx) => {
+        const satD = wk.find(d => parseDate(d).getDay() === 6);
+        const sunD = wk.find(d => parseDate(d).getDay() === 0);
+        if (!satD && !sunD) { weAssignments[wkIdx] = new Set(); return; }
+        // IDEs disponibles : pas verrouillées sur les deux jours du WE
+        const available = app.ides.filter(ide => {
+          const satLock = satD && locked[ide.id] && locked[ide.id][satD];
+          const sunLock = sunD && locked[ide.id] && locked[ide.id][sunD];
+          return !satLock || !sunLock; // disponible si au moins un jour est libre
+        });
+        // Trier par nb de WE travaillés (croissant), à égalité par id
+        available.sort((a, b) => (weCount[a.id] - weCount[b.id]) || (a.id - b.id));
+        const workers = new Set();
+        const needed = Math.min(app.minIdePerjour, available.length);
+        for (let i = 0; i < needed; i++) {
+          workers.add(available[i].id);
+          weCount[available[i].id]++;
+        }
+        weAssignments[wkIdx] = workers;
+      });
+
+      app.ides.forEach((ide, ideIdx) => {
+        const plan = {};
+
+        // Copier les codes verrouillés
+        const prev = app.planning[ide.id] || {};
+        Object.keys(prev).forEach(ds => { if (locked[ide.id][ds]) plan[ds] = prev[ds]; });
+
+        // NOTE : les fériés ne sont plus pré-marqués 'F' — ils participent
+        // à la génération comme des jours normaux. Le marquage 'F' et les
+        // RJF sont appliqués en Phase 3b après le placement des postes.
+
+        // Roulement propre à cette IDE
+        const roul = app.roulements[ide.roulement];
+        const WORK_CYCLE = roul ? roul.cycle : ['JM2','JS2','J05'];
+        let cycleIdx = (ide.roulementOffset || 0) % WORK_CYCLE.length;
+
+        // ── PHASE 1 : RH + marqueur WE (semaine par semaine) ─────────
+        weeks.forEach((wk, wkIdx) => {
+          const worksWE = weAssignments[wkIdx] && weAssignments[wkIdx].has(ide.id);
+          const sat = wk.find(d => parseDate(d).getDay() === 6);
+          const sun = wk.find(d => parseDate(d).getDay() === 0);
+          const wd  = wk.filter(d => { const g = parseDate(d).getDay(); return g >= 1 && g <= 5; });
+
+          if (!worksWE) {
+            // Repos WE : RH sur Sam + Dim
+            if (sat && !plan[sat]) plan[sat] = 'RH';
+            if (sun && !plan[sun]) plan[sun] = 'RH';
+          } else {
+            // WE travaillé : placer 2 RH sur 2 jours de semaine consécutifs
+            // Préférence : Mer+Jeu, Jeu+Ven, Mar+Mer, Lun+Mar
+            const rhPairs = [
+              [wd[2], wd[3]],
+              [wd[3], wd[4]],
+              [wd[1], wd[2]],
+              [wd[0], wd[1]],
+            ];
+            let placed = false;
+            for (const [da, db] of rhPairs) {
+              if (da && db && !plan[da] && !plan[db]) {
+                plan[da] = 'RH'; plan[db] = 'RH';
+                placed = true; break;
+              }
+            }
+            if (!placed) {
+              // Repli : 2 premiers jours libres de la semaine
+              let n = 0;
+              for (const d of wd) { if (!plan[d] && n < 2) { plan[d] = 'RH'; n++; } }
+            }
+            // Marquer les jours WE pour affectation de poste en Phase 2
+            if (sat && !plan[sat]) plan[sat] = WE_PLACEHOLDER;
+            if (sun && !plan[sun]) plan[sun] = WE_PLACEHOLDER;
+          }
+        });
+
+        // ── PHASE 2 : Placement des postes en paires (scan linéaire) ─
+        // Règle fondamentale : jamais plus de 2 jours de travail consécutifs.
+        // Les jours libres isolés reçoivent un repos compensateur ('-').
+        let consec = 0; // compteur de jours travaillés consécutifs en cours
+
+        for (let i = 0; i < allDates.length; i++) {
+          const ds = allDates[i];
+
+          // Jour WE à travailler : attribuer le code de la rotation
+          if (plan[ds] === WE_PLACEHOLDER) {
+            plan[ds] = WORK_CYCLE[cycleIdx % WORK_CYCLE.length];
+            consec++;
+            if (consec === 2) cycleIdx++; // avancer la rotation après une paire complète
+            continue;
+          }
+
+          // Jour déjà affecté (RH, F, CA, etc.)
+          if (plan[ds]) {
+            consec = isWorkCode(plan[ds]) ? consec + 1 : 0;
+            continue;
+          }
+
+          // Jour libre ─────────────────────────────────────────────────
+
+          // Sécurité : forcer un repos si on a déjà 2 jours de travail consécutifs
+          if (consec >= 2) {
+            plan[ds] = '-';
+            consec = 0;
+            continue;
+          }
+
+          const nextDs   = (i + 1 < allDates.length) ? allDates[i + 1] : null;
+          const nextFree = nextDs && !plan[nextDs];
+
+          if (consec === 0 && nextFree) {
+            // Placer une nouvelle paire de travail
+            const wc = WORK_CYCLE[cycleIdx % WORK_CYCLE.length];
+            plan[ds]     = wc;
+            plan[nextDs] = wc;
+            cycleIdx++;
+            consec = 2;
+            i++; // sauter nextDs (déjà affecté)
+
+          } else if (consec === 1 && nextFree) {
+            // Compléter une paire déjà commencée (ex. : 1er jour WE suivi d'un jour libre)
+            plan[ds] = WORK_CYCLE[(cycleIdx - 1 + WORK_CYCLE.length) % WORK_CYCLE.length];
+            consec = 2;
+
+          } else {
+            // Jour libre isolé (le suivant est pris ou inexistant) → repos compensateur
+            plan[ds] = '-';
+            consec = 0;
+          }
+        }
+
+        // ── PHASE 3 : TP pour les IDEs à temps partiel (≈ 3 TP / 4 sem.) ─
+        if (ide.pct < 100) {
+          // Stratégie : convertir une paire (travail, travail) → ('-', 'TP')
+          // Le 1er jour devient '-' pour que le 2e (TP) ne soit pas un jour de travail isolé.
+          weeks.forEach((wk, wkIdx) => {
+            if (wkIdx % 4 === 3) return; // 1 semaine sur 4 sans TP
+            for (let wi = 0; wi < wk.length - 1; wi++) {
+              const d1 = wk[wi], d2 = wk[wi + 1];
+              if (isWorkCode(plan[d1]) && isWorkCode(plan[d2]) &&
+                  !locked[ide.id][d1] && !locked[ide.id][d2]) {
+                plan[d1] = '-';  // évite l'isolement du 2e jour
+                plan[d2] = 'TP';
+                break;
+              }
+            }
+          });
+        }
+
+        // ── PHASE 3b : Marquage des fériés non travaillés → 'F' ─────────
+        // Le RJF pour les fériés travaillés est placé en Phase 4b,
+        // après le rééquilibrage (qui génère les '-' compensateurs).
+        allDates.forEach(ds => {
+          if (!holidays.has(ds)) return;
+          if (locked[ide.id][ds]) return;
+          if (!plan[ds]) plan[ds] = 'F';
+        });
+
+        // ── PHASE 4 : Rééquilibrage horaire (distribué sur toute l'année) ─
+        // Problème corrigé : l'ancien algo mettait tous les repos compensateurs
+        // en fin d'année. Ici on les distribue uniformément.
+        let totalH = allDates.reduce((s, ds) => s + getHours(plan[ds] || ''), 0);
+        const target = targetHours(ide);
+        let excess   = totalH - target;
+
+        if (excess > 0) {
+          const workDays  = allDates.filter(ds => isWorkCode(plan[ds]) && !locked[ide.id][ds]);
+          const toConvert = Math.min(workDays.length - 2, Math.floor(excess / 12));
+
+          if (toConvert > 0) {
+            // Pas d'itération pour distribuer uniformément sur l'année
+            const step = Math.max(1, Math.floor(workDays.length / toConvert));
+            let converted = 0;
+
+            for (let k = 0; k < workDays.length && converted < toConvert; k += step) {
+              const ds  = workDays[k];
+              const idx = allDates.indexOf(ds);
+              const nDs = allDates[idx + 1];
+              const nWork = nDs && isWorkCode(plan[nDs]) && !locked[ide.id][nDs];
+
+              if (nWork && converted + 2 <= toConvert) {
+                // Convertir la paire entière → paire de repos (préserve la structure en paires)
+                plan[ds]  = '-';
+                plan[nDs] = '-';
+                converted += 2;
+                k++; // sauter le jour suivant
+              } else {
+                // Convertir seul, puis vérifier l'isolement du voisin
+                const pDs   = allDates[idx - 1];
+                const pWork = pDs && isWorkCode(plan[pDs]) && !locked[ide.id][pDs];
+                const aDs   = allDates[idx + 1];
+                const aWork = aDs && isWorkCode(plan[aDs]);
+
+                plan[ds] = '-';
+                converted++;
+
+                // Si le jour précédent est maintenant isolé, le convertir aussi
+                if (pWork && !aWork && converted < toConvert) {
+                  plan[pDs] = '-';
+                  converted++;
+                }
+              }
+            }
+          }
+        }
+
+        // ── PHASE 4b : RJF pour les fériés travaillés ───────────────────
+        // Maintenant que Phase 4 a créé des '-' compensateurs, on cherche
+        // le '-' le plus proche après chaque férié travaillé et on le
+        // remplace par 'RJF' (même catégorie, juste plus précis).
+        allDates.forEach((ds, i) => {
+          if (!holidays.has(ds)) return;
+          if (locked[ide.id][ds]) return;
+          if (!isWorkCode(plan[ds])) return;
+          // Chercher le jour de travail le plus proche dans une fenêtre de 14 jours (avant/après)
+          const RJF_WINDOW = 14;
+          let placed = false;
+          for (let dist = 1; dist <= RJF_WINDOW && !placed; dist++) {
+            const jFwd = i + dist;
+            if (jFwd < allDates.length && isWorkCode(plan[allDates[jFwd]]) && !locked[ide.id][allDates[jFwd]]) {
+              plan[allDates[jFwd]] = 'RJF'; placed = true;
+            } else {
+              const jBwd = i - dist;
+              if (jBwd >= 0 && isWorkCode(plan[allDates[jBwd]]) && !locked[ide.id][allDates[jBwd]]) {
+                plan[allDates[jBwd]] = 'RJF'; placed = true;
+              }
+            }
+          }
+          // Repli : toute l'année si rien dans la fenêtre
+          if (!placed) {
+            for (let j = i + 1; j < allDates.length; j++) {
+              if (isWorkCode(plan[allDates[j]]) && !locked[ide.id][allDates[j]]) {
+                plan[allDates[j]] = 'RJF'; placed = true; break;
+              }
+            }
+          }
+          if (!placed) {
+            for (let j = i - 1; j >= 0; j--) {
+              if (isWorkCode(plan[allDates[j]]) && !locked[ide.id][allDates[j]]) {
+                plan[allDates[j]] = 'RJF'; break;
+              }
+            }
+          }
+        });
+
+        app.planning[ide.id] = plan;
+      }); // fin forEach IDE
+
+      setTimeout(() => {
+        prog(80, 'Vérification de la couverture minimale…');
+
+        // ── PHASE 5 : Correction de couverture ────────────────────────
+        // Problème corrigé : l'ancien algo convertissait des RH sans vérifier
+        // les consécutifs → on vérifie maintenant avant de forcer le travail.
+        allDates.forEach((ds, dsIdx) => {
+          let cnt = app.ides.filter(ide => isWorkCode((app.planning[ide.id] || {})[ds])).length;
+          if (cnt >= app.minIdePerjour) return;
+          const isFerie = holidays.has(ds);
+
+          for (const ide of app.ides) {
+            if (cnt >= app.minIdePerjour) break;
+            if (locked[ide.id] && locked[ide.id][ds]) continue;
+
+            const plan = app.planning[ide.id];
+            const code = plan[ds];
+            if (code !== '-' && code !== 'RH' && code !== 'F') continue;
+
+            // Vérifier que l'ajout ne crée pas 3 jours consécutifs travaillés
+            const idx = allDates.indexOf(ds);
+            const p1  = allDates[idx - 1]; const p2 = allDates[idx - 2];
+            const n1  = allDates[idx + 1]; const n2 = allDates[idx + 2];
+            const wp1 = p1 && isWorkCode(plan[p1]);
+            const wp2 = p2 && isWorkCode(plan[p2]);
+            const wn1 = n1 && isWorkCode(plan[n1]);
+            const wn2 = n2 && isWorkCode(plan[n2]);
+
+            if ((wp1 && wp2) || (wn1 && wn2) || (wp1 && wn1)) continue; // éviter 3+
+
+            plan[ds] = 'JM2';
+            cnt++;
+
+            // Si le jour est férié, convertir le jour de travail le plus proche en RJF
+            if (isFerie) {
+              const RJF_WINDOW = 14;
+              let placed = false;
+              for (let dist = 1; dist <= RJF_WINDOW && !placed; dist++) {
+                const jFwd = dsIdx + dist;
+                if (jFwd < allDates.length && isWorkCode(plan[allDates[jFwd]]) && !(locked[ide.id] && locked[ide.id][allDates[jFwd]])) {
+                  plan[allDates[jFwd]] = 'RJF'; placed = true;
+                } else {
+                  const jBwd = dsIdx - dist;
+                  if (jBwd >= 0 && isWorkCode(plan[allDates[jBwd]]) && !(locked[ide.id] && locked[ide.id][allDates[jBwd]])) {
+                    plan[allDates[jBwd]] = 'RJF'; placed = true;
+                  }
+                }
+              }
+              if (!placed) {
+                for (let j = dsIdx + 1; j < allDates.length; j++) {
+                  if (isWorkCode(plan[allDates[j]]) && !(locked[ide.id] && locked[ide.id][allDates[j]])) {
+                    plan[allDates[j]] = 'RJF'; placed = true; break;
+                  }
+                }
+              }
+              if (!placed) {
+                for (let j = dsIdx - 1; j >= 0; j--) {
+                  if (isWorkCode(plan[allDates[j]]) && !(locked[ide.id] && locked[ide.id][allDates[j]])) {
+                    plan[allDates[j]] = 'RJF'; break;
+                  }
+                }
+              }
+            }
+          }
+        });
+
+        prog(100, 'Génération terminée !');
+
+        const violations = checkViolations();
+        const errN  = violations.filter(v => v.type === 'danger').length;
+        const warnN = violations.filter(v => v.type === 'warn').length;
+        const res   = document.getElementById('gen-result');
+        res.style.display = 'block';
+        res.innerHTML = `<div class="alert alert-${errN === 0 ? 'success' : 'warn'}">
+          ✓ Planning généré — ${errN} erreur(s) de couverture, ${warnN} avertissement(s) de rythme.
+        </div>`;
+        document.getElementById('gen-btn').disabled = false;
+        refreshAll();
+      }, 600);
+    }, 500);
+  }, 200);
+}
+
+// =============================
+// RENDERING
+// =============================
+function renderIdeList() {
+  const el = document.getElementById('ide-list');
+  el.innerHTML = app.ides.map((ide, i) => {
+    const stats = computeStats(ide);
+    const balClass = Math.abs(stats.balance) < 20 ? 'balance-ok' : Math.abs(stats.balance) < 60 ? 'balance-warn' : 'balance-danger';
+    const balSign = stats.balance >= 0 ? '+' : '';
+    return `
+    <div class="ide-card ${app.selectedIde === ide.id ? 'selected' : ''}" onclick="selectIde(${ide.id})">
+      <div class="ide-avatar" style="background:${ide.color.bg};color:${ide.color.text};">${ide.short}</div>
+      <div class="ide-info">
+        <div class="ide-name">${ide.name}</div>
+        <div class="ide-balance ${balClass}">${stats.workedH}h / ${stats.target}h (${balSign}${stats.balance}h)</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function selectIde(id) {
+  app.selectedIde = app.selectedIde === id ? null : id;
+  renderIdeList();
+  renderSelectedIdeStats();
+}
+
+function renderSelectedIdeStats() {
+  const el = document.getElementById('selected-ide-stats');
+  if(!app.selectedIde) { el.style.display='none'; return; }
+  el.style.display='block';
+  const ide = app.ides.find(i=>i.id===app.selectedIde);
+  const s = computeStats(ide);
+  document.getElementById('stats-ide-name').textContent = ide.short;
+  const pctClass = s.pct >= 95 ? 'stat-ok' : s.pct >= 80 ? 'stat-warn' : 'stat-danger';
+  document.getElementById('ide-stats-content').innerHTML = `
+    <div class="progress-bar" style="margin-bottom:8px;"><div class="progress-fill ${s.pct>100?'over':s.pct>90?'good':'near'}" style="width:${Math.min(100,s.pct)}%"></div></div>
+    ${row('Heures travaillées', s.workedH+'h', pctClass)}
+    ${row('Objectif', s.target+'h', '')}
+    ${row('Balance', (s.balance>=0?'+':'')+s.balance+'h', Math.abs(s.balance)<20?'stat-ok':Math.abs(s.balance)<60?'stat-warn':'stat-danger')}
+    ${row('Jours travaillés', s.worked, '')}
+    ${row('RH', s.rh, '')}
+    ${row('CA / congés', s.ca, '')}
+    ${row('Repos comp. (-)', s.recuper - s.rjf, '')}
+    ${row('RJF (récup. fériés)', s.rjf, s.rjf>0?'stat-ok':'')}
+    ${row('TP', s.tp, '')}
+    ${row('Dimanches travaillés', s.workedSundays, s.workedSundays>=20?'stat-ok':'stat-warn')}
+  `;
+}
+
+function row(label, val, cls) {
+  return `<div class="stat-row"><span class="stat-label">${label}</span><span class="stat-value ${cls}">${val}</span></div>`;
+}
+
+function renderViolationsSummary() {
+  const v = checkViolations();
+  const el = document.getElementById('violations-summary');
+  const dangers = v.filter(x=>x.type==='danger');
+  const warns = v.filter(x=>x.type==='warn');
+  if(!v.length) {
+    el.innerHTML = '<div class="alert alert-success" style="font-size:11px;">✓ Aucune violation détectée</div>';
+  } else {
+    el.innerHTML = `
+      ${dangers.length ? `<div class="alert alert-danger" style="font-size:11px;"><span>⛔</span><div>${dangers.length} erreur(s) de couverture</div></div>` : ''}
+      ${warns.length ? `<div class="alert alert-warn" style="font-size:11px;"><span>⚠</span><div>${warns.length} avertissement(s)</div></div>` : ''}
+    `;
+  }
+}
+
+function renderLegend() {
+  const el = document.getElementById('legend');
+  const shown = ['JM2','J05','JS2','J10','RH','CA','-','TP','F'];
+  el.innerHTML = shown.map(k => {
+    const c = app.codes[k];
+    if(!c) return '';
+    return `<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;">
+      <span style="width:12px;height:12px;border-radius:3px;background:${c.bg};border:1px solid ${c.text}33;display:inline-block;"></span>
+      <span style="color:var(--text2);">${k}</span>
+    </span>`;
+  }).join('');
+}
+
+function renderPlanning() {
+  const el = document.getElementById('planning-content');
+  const months = app.currentMonth === -1
+    ? Array.from({length:12}, (_,i) => i)
+    : [app.currentMonth];
+
+  el.innerHTML = months.map(m => renderMonth(m)).join('');
+}
+
+function renderMonth(m) {
+  const days = daysInMonth(app.year, m);
+  const holidays = frenchHolidays(app.year);
+
+  // Build header cells
+  let header = '<th class="ide-row-label" style="min-width:100px;"></th>';
+  for(let d=1;d<=days;d++) {
+    const dow = dayOfWeek(app.year, m, d);
+    const dayNames = ['Lu','Ma','Me','Je','Ve','Sa','Di'];
+    const isWE = dow>=5;
+    const ds = dateStr(app.year, m, d);
+    const isFerie = holidays.has(ds);
+    header += `<th class="${isWE?'day-sat':''}" style="${isFerie?'color:var(--danger);':''}">
+      <div style="font-size:9px;color:var(--text3);">${dayNames[dow]}</div>
+      <div>${d}</div>
+    </th>`;
+  }
+
+  // Build IDE rows
+  let ideRows = app.ides.map(ide => {
+    let cells = `<td class="ide-row-label" title="Cliquer pour régénérer ${ide.name.split(' ')[0]} sur ce mois" style="cursor:pointer;" onclick="showRegenMonthModal(${ide.id}, ${m})">
+      <div style="display:flex;align-items:center;gap:6px;">
+        <div style="width:20px;height:20px;border-radius:50%;background:${ide.color.bg};color:${ide.color.text};display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0;">${ide.short.slice(0,2)}</div>
+        <span style="font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70px;">${ide.name.split(' ')[0]}</span>
+      </div>
+    </td>`;
+    for(let d=1;d<=days;d++) {
+      const ds = dateStr(app.year, m, d);
+      const code = (app.planning[ide.id]||{})[ds] || '';
+      const cdef = app.codes[code];
+      const isWE = dayOfWeek(app.year,m,d)>=5;
+      const isFerie = holidays.has(ds);
+      const cellStyle = cdef
+        ? `background:${cdef.bg};color:${cdef.text};`
+        : (isWE ? 'background:var(--surface2);color:var(--text3);' : '');
+      cells += `<td>
+        <div class="cell tooltip-container" style="${cellStyle}${isWE&&!code?'opacity:0.6;':''}" onclick="openCellModal(${ide.id},'${ds}')">
+          ${code || (isFerie?'F':'')}
+          ${cdef ? `<span class="tooltip">${cdef.label}</span>` : ''}
+        </div>
+      </td>`;
+    }
+    return `<tr>${cells}</tr>`;
+  }).join('');
+
+  // Coverage row
+  let coverageRow = '<td class="ide-row-label" style="font-size:10px;color:var(--text3);">Couverture</td>';
+  for(let d=1;d<=days;d++) {
+    const ds = dateStr(app.year, m, d);
+    const isFerie = holidays.has(ds);
+    const count = app.ides.filter(ide => isWorkCode((app.planning[ide.id]||{})[ds])).length;
+    const ok = count >= app.minIdePerjour;
+    const cls = isFerie ? '' : ok ? 'cov-ok' : 'cov-under';
+    coverageRow += `<td><div class="coverage-cell ${cls}">${isFerie?'F':count}</div></td>`;
+  }
+
+  const stats = app.ides.map(ide => {
+    const plan = app.planning[ide.id]||{};
+    let h=0;
+    for(let d=1;d<=days;d++) h+=getHours(plan[dateStr(app.year,m,d)]||'');
+    return h;
+  });
+  const totalH = stats.reduce((a,b)=>a+b,0);
+
+  return `
+  <div class="month-card" style="margin-bottom:16px;">
+    <div class="month-header">
+      ${MONTHS[m]} ${app.year}
+      <span class="month-stats">${days} jours · ${totalH}h travaillées</span>
+    </div>
+    <div class="table-scroll">
+      <table class="grid-table">
+        <thead><tr>${header}</tr></thead>
+        <tbody>
+          ${ideRows}
+          <tr class="coverage-row">${coverageRow}</tr>
+        </tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+function renderDashboard() {
+  const el = document.getElementById('dashboard-cards');
+  el.innerHTML = app.ides.map(ide => {
+    const s = computeStats(ide);
+    const balSign = s.balance>=0?'+':'';
+    const pctFill = Math.min(100,s.pct);
+    const fillClass = s.pct > 102 ? 'over' : s.pct > 95 ? 'good' : 'near';
+    return `
+    <div class="settings-card" style="padding:16px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+        <div class="ide-avatar" style="background:${ide.color.bg};color:${ide.color.text};width:38px;height:38px;font-size:12px;">${ide.short}</div>
+        <div>
+          <div style="font-weight:600;font-size:13px;">${ide.name}</div>
+          <div style="font-size:11px;color:var(--text3);">${ide.pct}% · objectif ${s.target}h</div>
+        </div>
+      </div>
+      <div class="progress-bar" style="margin-bottom:6px;"><div class="progress-fill ${fillClass}" style="width:${pctFill}%"></div></div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-bottom:10px;">
+        <span>${s.workedH}h réalisées</span>
+        <span style="color:${Math.abs(s.balance)<20?'var(--success)':Math.abs(s.balance)<60?'var(--warn)':'var(--danger)'};">
+          ${balSign}${s.balance}h
+        </span>
+      </div>
+      ${row('Jours travaillés', s.worked, '')}
+      ${row('CA/congés', s.ca, '')}
+      ${row('Repos comp.', s.recuper, '')}
+      ${row('Dim. travaillés', s.workedSundays, s.workedSundays>=20?'stat-ok':'stat-warn')}
+    </div>`;
+  }).join('');
+
+  // Violations detail
+  const v = checkViolations();
+  const vEl = document.getElementById('violations-detail');
+  if(!v.length) {
+    vEl.innerHTML = '<div class="alert alert-success">✓ Aucune violation</div>';
+  } else {
+    vEl.innerHTML = v.map(vi => `
+      <div class="violation-item">
+        <div class="vi-dot" style="background:${vi.type==='danger'?'var(--danger)':'var(--warn)'};"></div>
+        <div>${vi.msg}</div>
+      </div>
+    `).join('');
+  }
+}
+
+function renderSettings() {
+  // Roulements list
+  const rl = document.getElementById('roulements-list');
+  const rHtml = Object.keys(app.roulements).map(key => {
+    const r = app.roulements[key];
+    const cycleHtml = r.cycle.map((code, ci) => {
+      const c = app.codes[code] || { bg:'#eee', text:'#555' };
+      const arr = ci > 0 ? '<span style="color:var(--text3);margin:0 3px;">&rarr;</span>' : '';
+      return arr + '<span style="padding:3px 8px;border-radius:4px;font-size:11px;font-weight:700;display:inline-block;background:' + c.bg + ';color:' + c.text + ';">' + code + '</span>';
+    }).join('');
+    const usedBy = app.ides.filter(i => i.roulement === key).map(i => i.short).join(', ') || '-';
+    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">' +
+      '<div style="min-width:90px;font-weight:600;font-size:12px;">' + r.name + '</div>' +
+      '<div style="flex:1;">' + cycleHtml + '</div>' +
+      '<div style="font-size:11px;color:var(--text3);min-width:80px;">IDE : ' + usedBy + '</div>' +
+      '<button class="btn" style="padding:3px 8px;font-size:11px;" onclick="showEditRoulementModal(' + JSON.stringify(key) + ')">Modifier</button>' +
+      '<button class="btn" style="padding:3px 8px;font-size:11px;" onclick="removeRoulement(' + JSON.stringify(key) + ')">X</button>' +
+      '</div>';
+  }).join('');
+  rl.innerHTML = rHtml || '<div style="color:var(--text3);font-size:12px;">Aucun roulement.</div>';
+
+    // IDE list
+  const el = document.getElementById('settings-ide-list');
+  el.innerHTML = app.ides.map((ide,i) => {
+    const roul = app.roulements[ide.roulement];
+    const roulLabel = roul ? roul.name + ' +' + (ide.roulementOffset||0) : '—';
+    return `
+    <div class="ide-list-item">
+      <div class="ide-avatar" style="background:${ide.color.bg};color:${ide.color.text};width:32px;height:32px;font-size:11px;">${ide.short}</div>
+      <div style="flex:1;">
+        <div style="font-size:13px;font-weight:500;">${ide.name}</div>
+        <div style="font-size:11px;color:var(--text3);">${ide.pct}% · ${targetHours(ide)}h/an · ${roulLabel}</div>
+      </div>
+      <button class="btn" style="padding:4px 8px;font-size:11px;margin-right:4px;" onclick="editIde(${i})">&#9998;</button>
+      <button class="btn" style="padding:4px 8px;font-size:11px;" onclick="removeIde(${i})">&#10005;</button>
+    </div>`;
+  }).join('');
+
+  // Codes list
+  const cel = document.getElementById('codes-list');
+  cel.innerHTML = Object.keys(app.codes).map(k => {
+    const c = app.codes[k];
+    return `
+    <div class="tag-item">
+      <div class="tag-badge" style="background:${c.bg};color:${c.text};">${k}</div>
+      <div class="tag-desc">${c.label}</div>
+      <span class="badge badge-blue">${c.type}</span>
+      ${c.hours?`<span class="badge badge-green">${c.hours}h</span>`:''}
+      <button class="btn" style="padding:2px 6px;font-size:11px;" onclick="removeCode('${k}')">✕</button>
+    </div>`;
+  }).join('');
+}
+
+// =============================
+// CELL MODAL
+// =============================
+function openCellModal(ideId, ds) {
+  app.editingCell = { ideId, ds };
+  app.selectedCode = (app.planning[ideId]||{})[ds] || '';
+  const d = parseDate(ds);
+  document.getElementById('cell-modal-title').textContent =
+    `${app.ides.find(i=>i.id===ideId).name} — ${ds}`;
+
+  // Build code picker
+  const picker = document.getElementById('code-picker');
+  picker.innerHTML = Object.keys(app.codes).map(k => {
+    const c = app.codes[k];
+    return `<button class="code-btn ${app.selectedCode===k?'selected':''}"
+      style="background:${c.bg};color:${c.text};border-color:${c.text}44;"
+      onclick="selectCellCode('${k}')">${k}</button>`;
+  }).join('');
+
+  document.getElementById('cell-code-manual').value = app.selectedCode;
+  updateCellPreview();
+  checkCellAlerts(ideId, ds);
+  openModal('cell-modal');
+}
+
+function selectCellCode(code) {
+  app.selectedCode = code;
+  document.getElementById('cell-code-manual').value = code;
+  // Refresh picker selection
+  document.querySelectorAll('.code-btn').forEach(btn => {
+    btn.classList.toggle('selected', btn.textContent.trim() === code);
+  });
+  updateCellPreview();
+}
+
+function manualCodeInput(val) {
+  app.selectedCode = val.toUpperCase();
+  document.querySelectorAll('.code-btn').forEach(btn => {
+    btn.classList.toggle('selected', btn.textContent.trim() === app.selectedCode);
+  });
+  updateCellPreview();
+}
+
+function updateCellPreview() {
+  const prev = document.getElementById('cell-preview');
+  const c = app.codes[app.selectedCode];
+  if(!app.selectedCode) { prev.innerHTML=''; return; }
+  if(c) {
+    prev.innerHTML = `<div style="display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:6px;background:${c.bg};color:${c.text};font-size:12px;font-weight:600;">${app.selectedCode} <span style="font-weight:400;">— ${c.label}</span></div>`;
+  } else {
+    prev.innerHTML = `<div class="alert alert-warn">Code "${app.selectedCode}" non reconnu (sera ajouté tel quel)</div>`;
+  }
+}
+
+function checkCellAlerts(ideId, ds) {
+  const al = document.getElementById('cell-modal-alerts');
+  const alerts = [];
+  const ide = app.ides.find(i=>i.id===ideId);
+  const stats = computeStats(ide);
+  if(Math.abs(stats.balance) > 60) {
+    alerts.push({type:'warn', msg:`Balance horaire : ${stats.balance>0?'+':''}${stats.balance}h (objectif ${stats.target}h)`});
+  }
+  al.innerHTML = alerts.map(a=>`<div class="alert alert-${a.type}">${a.msg}</div>`).join('');
+}
+
+function confirmCell() {
+  if(!app.editingCell) return;
+  const { ideId, ds } = app.editingCell;
+  if(!app.planning[ideId]) app.planning[ideId] = {};
+  const holidays = frenchHolidays(app.year);
+  const wasHoliday = holidays.has(ds);
+  const settingWork = app.selectedCode && isWorkCode(app.selectedCode);
+  if(app.selectedCode) app.planning[ideId][ds] = app.selectedCode;
+  else delete app.planning[ideId][ds];
+  closeModal('cell-modal');
+  // Si on affecte un poste de travail sur un jour férié → proposer RJF
+  if(wasHoliday && settingWork) {
+    if(confirm(`${ds} est un jour férié travaillé.\nAjouter automatiquement un RJF (récup. jour férié) sur le prochain jour libre ?`)) {
+      const all = allDatesOfYear(app.year);
+      const idx = all.indexOf(ds);
+      for(let i = idx+1; i < all.length; i++) {
+        const nd = all[i];
+        const existing = (app.planning[ideId]||{})[nd];
+        if(!existing || existing === '') {
+          if(!app.planning[ideId]) app.planning[ideId] = {};
+          app.planning[ideId][nd] = 'RJF';
+          break;
+        }
+      }
+    }
+  }
+  refreshAll();
+}
+
+function clearCell() {
+  if(!app.editingCell) return;
+  const { ideId, ds } = app.editingCell;
+  if(app.planning[ideId]) delete app.planning[ideId][ds];
+  closeModal('cell-modal');
+  refreshAll();
+}
+
+// =============================
+// IDE MODAL
+// =============================
+function populateRoulementSelect(selectedKey, offsetVal) {
+  const sel = document.getElementById('ide-roulement-input');
+  sel.innerHTML = Object.keys(app.roulements).map(k =>
+    `<option value="${k}" ${k===selectedKey?'selected':''}>${app.roulements[k].name} (${app.roulements[k].cycle.join(' → ')})</option>`
+  ).join('');
+  document.getElementById('ide-offset-input').value = offsetVal || 0;
+}
+
+function showAddIdeModal() {
+  app.editingIdeIdx = null;
+  document.getElementById('ide-modal-title').textContent = 'Ajouter une IDE';
+  document.getElementById('ide-name-input').value = '';
+  document.getElementById('ide-short-input').value = '';
+  document.getElementById('ide-pct-input').value = '100';
+  populateRoulementSelect(Object.keys(app.roulements)[0], 0);
+  renderAvatarColorPicker(0);
+  openModal('ide-modal');
+}
+
+function renderAvatarColorPicker(selected) {
+  const el = document.getElementById('avatar-color-picker');
+  el.innerHTML = AVATAR_COLORS.map((c,i) => `
+    <div onclick="selectAvatarColor(${i})" style="width:28px;height:28px;border-radius:50%;background:${c.bg};border:2px solid ${i===selected?c.text:'transparent'};cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:${c.text};" id="avatar-c-${i}">A</div>
+  `).join('');
+  app._selectedAvatarColor = selected;
+}
+
+function selectAvatarColor(i) {
+  app._selectedAvatarColor = i;
+  renderAvatarColorPicker(i);
+}
+
+function confirmAddIde() {
+  const name = document.getElementById('ide-name-input').value.trim();
+  const short = document.getElementById('ide-short-input').value.trim().toUpperCase();
+  const pct = parseInt(document.getElementById('ide-pct-input').value);
+  const roulement = document.getElementById('ide-roulement-input').value;
+  const roulementOffset = parseInt(document.getElementById('ide-offset-input').value) || 0;
+  if(!name || !short) return alert('Nom et initiales requis.');
+  const newIde = {
+    id: Date.now(),
+    name, short, pct,
+    color: AVATAR_COLORS[app._selectedAvatarColor || 0],
+    roulement, roulementOffset
+  };
+  app.ides.push(newIde);
+  closeModal('ide-modal');
+  refreshAll();
+}
+
+function removeIde(idx) {
+  if(!confirm(`Supprimer ${app.ides[idx].name} ? Les données de planning seront perdues.`)) return;
+  const id = app.ides[idx].id;
+  delete app.planning[id];
+  app.ides.splice(idx, 1);
+  refreshAll();
+}
+
+// =============================
+// CODE MODAL
+// =============================
+function showAddCodeModal() {
+  document.getElementById('new-code-key').value = '';
+  document.getElementById('new-code-label').value = '';
+  document.getElementById('new-code-type').value = 'work';
+  document.getElementById('new-code-hours').value = '12';
+  document.getElementById('new-code-color').value = '#dbeeff';
+  document.getElementById('new-code-textcolor').value = '#1a5c8a';
+  openModal('code-modal');
+}
+
+function confirmAddCode() {
+  const key = document.getElementById('new-code-key').value.trim().toUpperCase();
+  const label = document.getElementById('new-code-label').value.trim();
+  const type = document.getElementById('new-code-type').value;
+  const hours = parseFloat(document.getElementById('new-code-hours').value) || 0;
+  const bg = document.getElementById('new-code-color').value;
+  const text = document.getElementById('new-code-textcolor').value;
+  if(!key) return alert('Code requis.');
+  app.codes[key] = { label, type, hours, bg, text };
+  closeModal('code-modal');
+  refreshAll();
+}
+
+function removeCode(key) {
+  if(!confirm(`Supprimer le code "${key}" ?`)) return;
+  delete app.codes[key];
+  refreshAll();
+}
+
+// =============================
+// CLEAR GENERATION
+// =============================
+function clearGeneration() {
+  if(!confirm('Supprimer toute la génération ?\nLes CA, HS, FR et absences sont préservés. Tout le reste sera effacé.')) return;
+  const LOCKED = new Set(['CA','CA-1','CET','HS','HS-1','FR','AM','FCJ','FCH','?','RJF','H-','H+P','H+R']);
+  app.ides.forEach(ide => {
+    const plan = app.planning[ide.id] || {};
+    const kept = {};
+    Object.keys(plan).forEach(ds => { if(LOCKED.has(plan[ds])) kept[ds] = plan[ds]; });
+    app.planning[ide.id] = kept;
+  });
+  refreshAll();
+}
+
+
+// =============================
+// GESTION DES ROULEMENTS
+// =============================
+function showAddRoulementModal() {
+  app._editingRoulementKey = null;
+  document.getElementById('roulement-modal-title').textContent = 'Nouveau roulement';
+  document.getElementById('roulement-name-input').value = '';
+  document.getElementById('roulement-cycle-input').value = 'JM2,JM2,JS2,JS2';
+  openModal('roulement-modal');
+}
+
+function showEditRoulementModal(key) {
+  app._editingRoulementKey = key;
+  const r = app.roulements[key];
+  document.getElementById('roulement-modal-title').textContent = 'Modifier ' + r.name;
+  document.getElementById('roulement-name-input').value = r.name;
+  document.getElementById('roulement-cycle-input').value = r.cycle.join(',');
+  openModal('roulement-modal');
+}
+
+function confirmRoulement() {
+  const name = document.getElementById('roulement-name-input').value.trim();
+  const cycleStr = document.getElementById('roulement-cycle-input').value.trim().toUpperCase();
+  if(!name || !cycleStr) return alert('Nom et cycle requis.');
+  const cycle = cycleStr.split(',').map(s => s.trim()).filter(s => s);
+  if(cycle.length === 0) return alert('Le cycle doit contenir au moins un code.');
+  const invalidCodes = cycle.filter(c => !app.codes[c] || app.codes[c].type !== 'work');
+  if(invalidCodes.length) return alert('Codes invalides ou non-travail : ' + invalidCodes.join(', '));
+
+  if(app._editingRoulementKey) {
+    app.roulements[app._editingRoulementKey].name = name;
+    app.roulements[app._editingRoulementKey].cycle = cycle;
+  } else {
+    const key = 'R-' + Date.now();
+    app.roulements[key] = { name, cycle };
+  }
+  closeModal('roulement-modal');
+  renderSettings();
+}
+
+function removeRoulement(key) {
+  const usedBy = app.ides.filter(i => i.roulement === key);
+  if(usedBy.length) {
+    return alert('Impossible de supprimer : ' + usedBy.map(i=>i.name).join(', ') + ' utilisent ce roulement.');
+  }
+  if(!confirm('Supprimer "' + app.roulements[key].name + '" ?')) return;
+  delete app.roulements[key];
+  renderSettings();
+}
+
+// Modifier une IDE existante (roulement, offset, pct)
+function editIde(idx) {
+  const ide = app.ides[idx];
+  app.editingIdeIdx = idx;
+  document.getElementById('ide-modal-title').textContent = 'Modifier ' + ide.name;
+  document.getElementById('ide-name-input').value = ide.name;
+  document.getElementById('ide-short-input').value = ide.short;
+  document.getElementById('ide-pct-input').value = ide.pct;
+  populateRoulementSelect(ide.roulement, ide.roulementOffset);
+  renderAvatarColorPicker(AVATAR_COLORS.findIndex(c => c.bg === ide.color.bg) || 0);
+  // Change confirm button to update
+  document.querySelector('#ide-modal .modal-footer .btn-primary').setAttribute('onclick','updateIde()');
+  document.querySelector('#ide-modal .modal-footer .btn-primary').textContent = 'Mettre à jour';
+  openModal('ide-modal');
+}
+
+function updateIde() {
+  const idx = app.editingIdeIdx;
+  if(idx === null || idx === undefined) return;
+  const ide = app.ides[idx];
+  ide.name = document.getElementById('ide-name-input').value.trim() || ide.name;
+  ide.short = document.getElementById('ide-short-input').value.trim().toUpperCase() || ide.short;
+  ide.pct = parseInt(document.getElementById('ide-pct-input').value) || ide.pct;
+  ide.roulement = document.getElementById('ide-roulement-input').value;
+  ide.roulementOffset = parseInt(document.getElementById('ide-offset-input').value) || 0;
+  ide.color = AVATAR_COLORS[app._selectedAvatarColor || 0];
+  // Reset button
+  document.querySelector('#ide-modal .modal-footer .btn-primary').setAttribute('onclick','confirmAddIde()');
+  document.querySelector('#ide-modal .modal-footer .btn-primary').textContent = 'Ajouter';
+  closeModal('ide-modal');
+  refreshAll();
+}
+
+
+// =============================
+// ROTATION EDITOR
+// =============================
+function addRotationCode() {
+  const codes = Object.keys(app.codes).filter(k => app.codes[k].type === 'work');
+  const choice = prompt('Choisir un code de travail a ajouter au roulement :\n' + codes.join(', '));
+  if(!choice) return;
+  const key = choice.trim().toUpperCase();
+  if(!app.codes[key] || app.codes[key].type !== 'work') {
+    alert('Code "' + key + '" non trouve ou pas un code de travail.'); return;
+  }
+  app.workCycle.push(key);
+  renderSettings();
+}
+function removeRotationCode(i) {
+  if(app.workCycle.length <= 1) { alert('Le roulement doit contenir au moins un code.'); return; }
+  app.workCycle.splice(i, 1);
+  renderSettings();
+}
+
+// =============================
+// INDIVIDUAL MONTH REGEN
+// =============================
+function showRegenMonthModal(ideId, monthIdx) {
+  const ide = app.ides.find(i => i.id === ideId);
+  if(!ide) return;
+  app._regenTarget = { ideId, monthIdx };
+  document.getElementById('regen-month-title').textContent =
+    'Regenerer ' + ide.name.split(' ')[0] + ' - ' + MONTHS[monthIdx];
+  document.getElementById('regen-month-desc').textContent =
+    'Les affectations generees de ' + ide.name.split(' ')[0] + ' pour ' + MONTHS[monthIdx] +
+    ' seront recalculees. Les CA, HS, AM et absences sont preserves.';
+  openModal('regen-month-modal');
+}
+
+function confirmRegenMonth() {
+  if(!app._regenTarget) return;
+  const { ideId, monthIdx } = app._regenTarget;
+  closeModal('regen-month-modal');
+  regenIdeMonth(ideId, monthIdx);
+}
+
+function regenIdeMonth(ideId, monthIdx) {
+  const ide = app.ides.find(i => i.id === ideId);
+  if(!ide) return;
+  const ideIdx = app.ides.findIndex(i => i.id === ideId);
+
+  const holidays = frenchHolidays(app.year);
+  const LOCKED_CODES = new Set(['CA','CA-1','CET','HS','HS-1','FR','AM','FCJ','FCH','?','RJF','H-','H+P','H+R']);
+  const roulDef = app.roulements[ide.roulement];
+  const WORK_CYCLE = roulDef ? roulDef.cycle : ['JM2','JS2','J05'];
+  const WE_PLACEHOLDER = '__WE__';
+
+  const plan = Object.assign({}, app.planning[ideId] || {});
+  const locked = {};
+  Object.keys(plan).forEach(ds => { if(LOCKED_CODES.has(plan[ds])) locked[ds] = true; });
+
+  const days = daysInMonth(app.year, monthIdx);
+  const monthDates = [];
+  for(let d=1; d<=days; d++) monthDates.push(dateStr(app.year, monthIdx, d));
+
+  monthDates.forEach(ds => { if(!locked[ds]) delete plan[ds]; });
+  // Fériés traités après génération (Phase 3b) — pas pré-marqués ici.
+
+  function buildMonthWeeks() {
+    const weeks = [];
+    let cur = new Date(app.year, monthIdx, 1);
+    while(cur.getDay() !== 1) cur.setDate(cur.getDate() - 1);
+    const endLimit = new Date(app.year, monthIdx + 1, 7);
+    while(cur <= endLimit) {
+      const wk = [];
+      for(let d=0; d<7; d++) {
+        const dd = new Date(cur); dd.setDate(dd.getDate() + d);
+        const ds = dateStr(dd.getFullYear(), dd.getMonth(), dd.getDate());
+        if(monthDates.includes(ds)) wk.push(ds);
+      }
+      if(wk.length) weeks.push(wk);
+      cur.setDate(cur.getDate() + 7);
+    }
+    return weeks;
+  }
+  const monthWeeks = buildMonthWeeks();
+
+  const weCount = {};
+  app.ides.forEach(i => { weCount[i.id] = 0; });
+  allDatesOfYear(app.year).forEach(ds => {
+    const d = parseDate(ds);
+    if(d.getMonth() !== monthIdx) return;
+    if(d.getDay() !== 6 && d.getDay() !== 0) return;
+    app.ides.forEach(ide2 => {
+      if(isWorkCode((app.planning[ide2.id]||{})[ds])) weCount[ide2.id]++;
+    });
+  });
+
+  const weAssignments = {};
+  monthWeeks.forEach((wk, wkIdx) => {
+    const satD = wk.find(d => parseDate(d).getDay() === 6);
+    const sunD = wk.find(d => parseDate(d).getDay() === 0);
+    if(!satD && !sunD) { weAssignments[wkIdx] = new Set(); return; }
+    const available = app.ides.filter(ide => {
+      const satLock = satD && app.planning[ide.id] && LOCKED_CODES.has(app.planning[ide.id][satD]);
+      const sunLock = sunD && app.planning[ide.id] && LOCKED_CODES.has(app.planning[ide.id][sunD]);
+      return !satLock || !sunLock; // disponible si au moins un jour est libre
+    });
+    available.sort((a, b) => (weCount[a.id] - weCount[b.id]) || (a.id - b.id));
+    const workers = new Set();
+    const needed = Math.min(app.minIdePerjour, available.length);
+    for(let i=0; i<needed; i++) { workers.add(available[i].id); weCount[available[i].id]++; }
+    weAssignments[wkIdx] = workers;
+  });
+
+  monthWeeks.forEach((wk, wkIdx) => {
+    const worksWE = weAssignments[wkIdx] && weAssignments[wkIdx].has(ideId);
+    const sat = wk.find(d => parseDate(d).getDay() === 6);
+    const sun = wk.find(d => parseDate(d).getDay() === 0);
+    const wd  = wk.filter(d => { const g = parseDate(d).getDay(); return g >= 1 && g <= 5; });
+    if(!worksWE) {
+      if(sat && !plan[sat]) plan[sat] = 'RH';
+      if(sun && !plan[sun]) plan[sun] = 'RH';
+    } else {
+      const rhPairs = [[wd[2],wd[3]], [wd[3],wd[4]], [wd[1],wd[2]], [wd[0],wd[1]]];
+      let placed = false;
+      for(const [da, db] of rhPairs) {
+        if(da && db && !plan[da] && !plan[db]) { plan[da]='RH'; plan[db]='RH'; placed=true; break; }
+      }
+      if(!placed) { let n=0; for(const d of wd) { if(!plan[d] && n<2) { plan[d]='RH'; n++; } } }
+      if(sat && !plan[sat]) plan[sat] = WE_PLACEHOLDER;
+      if(sun && !plan[sun]) plan[sun] = WE_PLACEHOLDER;
+    }
+  });
+
+  let cycleIdx = (ide.roulementOffset || 0) % WORK_CYCLE.length;
+  let consec = 0;
+  for(let i=0; i<monthDates.length; i++) {
+    const ds = monthDates[i];
+    if(plan[ds] === WE_PLACEHOLDER) {
+      plan[ds] = WORK_CYCLE[cycleIdx % WORK_CYCLE.length];
+      consec++;
+      if(consec === 2) cycleIdx++;
+      continue;
+    }
+    if(plan[ds]) { consec = isWorkCode(plan[ds]) ? consec+1 : 0; continue; }
+    if(consec >= 2) { plan[ds] = '-'; consec = 0; continue; }
+    const nextDs = (i+1 < monthDates.length) ? monthDates[i+1] : null;
+    const nextFree = nextDs && !plan[nextDs];
+    if(consec === 0 && nextFree) {
+      const wc = WORK_CYCLE[cycleIdx % WORK_CYCLE.length];
+      plan[ds] = wc; plan[nextDs] = wc; cycleIdx++; consec = 2; i++;
+    } else if(consec === 1 && nextFree) {
+      plan[ds] = WORK_CYCLE[(cycleIdx-1+WORK_CYCLE.length) % WORK_CYCLE.length]; consec = 2;
+    } else {
+      plan[ds] = '-'; consec = 0;
+    }
+  }
+
+  if(ide.pct < 100) {
+    monthWeeks.forEach((wk, wkIdx) => {
+      if(wkIdx % 4 === 3) return;
+      for(let wi=0; wi<wk.length-1; wi++) {
+        const d1 = wk[wi], d2 = wk[wi+1];
+        if(isWorkCode(plan[d1]) && isWorkCode(plan[d2]) && !locked[d1] && !locked[d2]) {
+          plan[d1] = '-'; plan[d2] = 'TP'; break;
+        }
+      }
+    });
+  }
+
+  // Phase 3b : marquer 'F' les fériés non travaillés
+  monthDates.forEach(ds => {
+    if(!holidays.has(ds) || locked[ds]) return;
+    if(!plan[ds]) plan[ds] = 'F';
+  });
+
+  // Phase 4b : RJF pour fériés travaillés — chercher le '-' le plus proche
+  const allDatesYear = allDatesOfYear(app.year);
+  monthDates.forEach(ds => {
+    if(!holidays.has(ds) || locked[ds]) return;
+    if(!isWorkCode(plan[ds])) return;
+    const i = allDatesYear.indexOf(ds);
+    const RJF_WINDOW = 14;
+    let placed = false;
+    for(let dist = 1; dist <= RJF_WINDOW && !placed; dist++) {
+      const jFwd = i + dist;
+      if(jFwd < allDatesYear.length && isWorkCode(plan[allDatesYear[jFwd]]) && !locked[allDatesYear[jFwd]]) {
+        plan[allDatesYear[jFwd]] = 'RJF'; placed = true;
+      } else {
+        const jBwd = i - dist;
+        if(jBwd >= 0 && isWorkCode(plan[allDatesYear[jBwd]]) && !locked[allDatesYear[jBwd]]) {
+          plan[allDatesYear[jBwd]] = 'RJF'; placed = true;
+        }
+      }
+    }
+    if(!placed) {
+      for(let j = i+1; j < allDatesYear.length; j++) {
+        if(isWorkCode(plan[allDatesYear[j]]) && !locked[allDatesYear[j]]) {
+          plan[allDatesYear[j]] = 'RJF'; placed = true; break;
+        }
+      }
+    }
+    if(!placed) {
+      for(let j = i-1; j >= 0; j--) {
+        if(isWorkCode(plan[allDatesYear[j]]) && !locked[allDatesYear[j]]) {
+          plan[allDatesYear[j]] = 'RJF'; break;
+        }
+      }
+    }
+  });
+
+  app.planning[ideId] = plan;
+  refreshAll();
+}
+
+// =============================
+// GENERATE MODAL
+// =============================
+function showGenerateModal() {
+  document.getElementById('gen-progress').style.display = 'none';
+  document.getElementById('gen-result').style.display = 'none';
+  document.getElementById('gen-progress-bar').style.width = '0%';
+  document.getElementById('gen-btn').disabled = false;
+  openModal('gen-modal');
+}
+
+// =============================
+// MODALS
+// =============================
+function openModal(id) { document.getElementById(id).style.display='flex'; }
+function closeModal(id) { document.getElementById(id).style.display='none'; }
+document.querySelectorAll('.overlay').forEach(el => {
+  el.addEventListener('click', e => { if(e.target===el) closeModal(el.id); });
+});
+
+// =============================
+// NAVIGATION
+// =============================
+function switchTab(tab) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  document.querySelectorAll('.header-tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  if(tab==='dashboard') renderDashboard();
+  if(tab==='settings') renderSettings();
+}
+
+function changeYear(delta) {
+  app.year = app.year + delta;
+  document.getElementById('sidebar-year').textContent = app.year;
+  document.getElementById('setting-year').value = app.year;
+  refreshAll();
+}
+
+function changeMonth(val) {
+  app.currentMonth = parseInt(val);
+  refreshAll();
+}
+
+function setView(v) {
+  app.currentView = v;
+  document.querySelectorAll('.view-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+  renderPlanning();
+}
+
+// =============================
+// EXPORT
+// =============================
+function exportPlanning() {
+  // Simple CSV export
+  const holidays = frenchHolidays(app.year);
+  const allDates = allDatesOfYear(app.year);
+  let csv = 'Date,' + app.ides.map(i=>i.name).join(',') + ',Couverture\n';
+  allDates.forEach(ds => {
+    const row = [ds];
+    let count = 0;
+    app.ides.forEach(ide => {
+      const code = (app.planning[ide.id]||{})[ds] || '';
+      row.push(code);
+      if(isWorkCode(code)) count++;
+    });
+    row.push(count);
+    csv += row.join(',') + '\n';
+  });
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `planning_ide_${app.year}.csv`;
+  a.click();
+}
+
+// =============================
+// REFRESH
+// =============================
+function refreshAll() {
+  renderIdeList();
+  renderSelectedIdeStats();
+  renderViolationsSummary();
+  renderLegend();
+  renderPlanning();
+}
+
+// =============================
+// INIT
+// =============================
+
+// =============================
+// SUPABASE CONFIG
+// =============================
+const SUPABASE_URL = 'https://svcelyavtkgxwhtkyqll.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN2Y2VseWF2dGtneHdodGt5cWxsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxMDI0OTQsImV4cCI6MjA5MTY3ODQ5NH0.1LzhNSMGQYQnlkjhVM6TE67DVbs23IJhJ9hc57XgvN8';
+let _sb = null;
+function getSB() {
+  if (!_sb) {
+    const persist = !document.getElementById('login-remember') || document.getElementById('login-remember').checked;
+    _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: persist } });
+  }
+  return _sb;
+}
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// =============================
+// INIT APP (auth gate)
+// =============================
+async function initApp() {
+  if (SUPABASE_URL === 'VOTRE_SUPABASE_URL') {
+    showCadreView();
+    refreshAll();
+    return;
+  }
+  // Supabase configuré : vérification de session avant d'afficher quoi que ce soit
+  const sb = getSB();
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { showLoginScreen(); return; }
+  await handleLogin(session.user);
+}
+
+function _hideAll() {
+  document.getElementById('loading-screen').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app-root').style.display = 'none';
+  document.getElementById('ide-view').style.display = 'none';
+}
+function showLoginScreen() {
+  _hideAll();
+  document.getElementById('login-screen').style.display = 'flex';
+}
+function showCadreView() {
+  _hideAll();
+  document.getElementById('app-root').style.display = 'flex';
+}
+function showIdeView() {
+  _hideAll();
+  document.getElementById('ide-view').style.display = 'block';
+}
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const errEl = document.getElementById('login-error');
+  errEl.textContent = '';
+  if (!email || !password) { errEl.textContent = 'Email et mot de passe requis.'; return; }
+  const sb = getSB();
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  if (error) { errEl.textContent = error.message; return; }
+  await handleLogin(data.user);
+}
+
+async function handleLogin(user) {
+  const sb = getSB();
+  const { data: profile } = await sb.from('profiles').select('*').eq('id', user.id).single();
+  if (!profile) {
+    document.getElementById('login-error').textContent = 'Profil introuvable. Contactez le cadre.';
+    showLoginScreen();
+    return;
+  }
+  document.getElementById('user-info').textContent = user.email;
+  if (profile.role === 'cadre') {
+    document.getElementById('publish-btn').style.display = '';
+    document.getElementById('logout-btn').style.display = '';
+    document.getElementById('tab-btn-requests').style.display = '';
+    showCadreView();
+    await loadPlanningFromSupabase();
+    refreshAll();
+    startRequestsPolling();
+  } else {
+    document.getElementById('logout-btn').style.display = '';
+    showIdeView();
+    await loadIdePlanningAndShow(profile.ide_id);
+  }
+}
+
+async function doLogout() {
+  const sb = getSB();
+  await sb.auth.signOut();
+  _sb = null;
+  document.getElementById('user-info').textContent = '';
+  document.getElementById('publish-btn').style.display = 'none';
+  document.getElementById('logout-btn').style.display = 'none';
+  showLoginScreen();
+}
+
+// =============================
+// PUBLISH (cadre)
+// =============================
+async function publishPlanning() {
+  const sb = getSB();
+  const rows = [];
+  // 'F' est calculé depuis le calendrier férié, pas besoin de le stocker
+  const SKIP_CODES = new Set(['F']);
+  app.ides.forEach(ide => {
+    const plan = app.planning[ide.id] || {};
+    Object.keys(plan).forEach(ds => {
+      if (!SKIP_CODES.has(plan[ds])) {
+        rows.push({ year: app.year, ide_id: ide.id, date_str: ds, code: plan[ds] });
+      }
+    });
+  });
+  // Supprimer les anciennes données de l'année puis réinsérer
+  const { error: delErr } = await sb.from('planning_data').delete().eq('year', app.year);
+  if (delErr) { alert('Erreur suppression : ' + delErr.message); return; }
+  for (let i = 0; i < rows.length; i += 500) {
+    const { error } = await sb.from('planning_data').insert(rows.slice(i, i + 500));
+    if (error) { alert('Erreur publication batch ' + (i/500+1) + ' : ' + error.message); return; }
+  }
+  alert('Planning publie avec succes !');
+}
+
+// =============================
+// LOAD FROM SUPABASE (cadre)
+// =============================
+async function loadPlanningFromSupabase() {
+  const sb = getSB();
+  const PAGE = 500;
+  let from = 0;
+  while (true) {
+    const { data, error } = await sb.from('planning_data')
+      .select('*').eq('year', app.year).range(from, from + PAGE - 1);
+    if (error || !data || data.length === 0) break;
+    data.forEach(row => {
+      if (!app.planning[row.ide_id]) app.planning[row.ide_id] = {};
+      app.planning[row.ide_id][row.date_str] = row.code;
+    });
+    if (data.length < PAGE) break;
+    from += PAGE;
+  }
+}
+
+// =============================
+// REQUESTS POLLING (cadre)
+// =============================
+let _pollInterval = null;
+function startRequestsPolling() {
+  loadRequests();
+  if (_pollInterval) clearInterval(_pollInterval);
+  _pollInterval = setInterval(loadRequests, 30000);
+}
+
+async function loadRequests() {
+  const sb = getSB();
+  const { data } = await sb.from('requests').select('*').eq('year', app.year).order('created_at', { ascending: false });
+  if (!data) return;
+  const pending = data.filter(r => r.status === 'pending').length;
+  const badge = document.getElementById('requests-badge');
+  if (badge) badge.textContent = pending > 0 ? pending : '';
+  renderRequestsCadre(data);
+}
+
+function renderRequestsCadre(reqs) {
+  const el = document.getElementById('requests-content');
+  if (!el) return;
+  if (!reqs || reqs.length === 0) {
+    el.textContent = '';
+    const p = document.createElement('p');
+    p.style.cssText = 'color:#888;text-align:center;padding:2rem;';
+    p.textContent = 'Aucune requete.';
+    el.appendChild(p);
+    return;
+  }
+  el.textContent = '';
+  reqs.forEach(r => {
+    const card = document.createElement('div');
+    card.style.cssText = 'background:#1e293b;border-radius:8px;padding:1rem;margin-bottom:.75rem;';
+
+    const header = document.createElement('div');
+    header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;';
+    const title = document.createElement('b');
+    title.textContent = r.ide_name + ' — ' + r.date_str;
+    const statusSpan = document.createElement('span');
+    if (r.status === 'pending') { statusSpan.style.color = '#f59e0b'; statusSpan.textContent = 'En attente'; }
+    else if (r.status === 'accepted') { statusSpan.style.color = '#22c55e'; statusSpan.textContent = 'Acceptee'; }
+    else { statusSpan.style.color = '#ef4444'; statusSpan.textContent = 'Refusee'; }
+    statusSpan.style.fontWeight = '600';
+    header.appendChild(title);
+    header.appendChild(statusSpan);
+    card.appendChild(header);
+
+    const msg = document.createElement('div');
+    msg.style.cssText = 'color:#cbd5e1;margin-bottom:.5rem;';
+    msg.textContent = r.message;
+    card.appendChild(msg);
+
+    if (r.cadre_response) {
+      const resp = document.createElement('div');
+      resp.style.cssText = 'color:#94a3b8;font-style:italic;margin-bottom:.5rem;';
+      resp.textContent = r.cadre_response;
+      card.appendChild(resp);
+    }
+
+    if (r.status === 'pending') {
+      const actions = document.createElement('div');
+      actions.style.cssText = 'display:flex;gap:.5rem;';
+      const input = document.createElement('input');
+      input.id = 'resp-' + r.id;
+      input.placeholder = 'Reponse (optionnelle)...';
+      input.style.cssText = 'flex:1;background:#0f172a;border:1px solid #334155;border-radius:6px;padding:.4rem .75rem;color:#f1f5f9;font-size:.85rem;';
+      const btnOk = document.createElement('button');
+      btnOk.className = 'btn btn-success btn-sm';
+      btnOk.textContent = 'Accepter';
+      btnOk.onclick = () => respondRequest(r.id, 'accepted');
+      const btnKo = document.createElement('button');
+      btnKo.className = 'btn btn-danger btn-sm';
+      btnKo.textContent = 'Refuser';
+      btnKo.onclick = () => respondRequest(r.id, 'rejected');
+      actions.appendChild(input);
+      actions.appendChild(btnOk);
+      actions.appendChild(btnKo);
+      card.appendChild(actions);
+    }
+    el.appendChild(card);
+  });
+}
+
+async function respondRequest(reqId, status) {
+  const sb = getSB();
+  const respEl = document.getElementById('resp-' + reqId);
+  const resp = respEl ? respEl.value : '';
+  const { error } = await sb.from('requests').update({ status, cadre_response: resp }).eq('id', reqId);
+  if (error) { alert('Erreur : ' + error.message); return; }
+  loadRequests();
+}
+
+// =============================
+// IDE PERSONAL VIEW
+// =============================
+async function loadIdePlanningAndShow(ideId) {
+  const sb = getSB();
+  const { data } = await sb.from('planning_data').select('*').eq('year', app.year).eq('ide_id', ideId);
+  const plan = {};
+  if (data) data.forEach(row => { plan[row.date_str] = row.code; });
+  const ide = app.ides.find(i => i.id === ideId);
+  if (!ide) {
+    document.getElementById('ide-view').textContent = 'IDE introuvable (id=' + ideId + ').';
+    return;
+  }
+  renderIdePersonalView(ide, plan);
+}
+
+// ---- IDE VIEW STATE ----
+let _ideViewState = { ide: null, plan: null, month: new Date().getMonth(), tab: 'planning', myRequests: [] };
+
+function renderIdePersonalView(ide, plan) {
+  _ideViewState.ide = ide;
+  _ideViewState.plan = plan;
+  _ideViewState.month = new Date().getMonth();
+  _ideRender();
+}
+
+function _ideRender() {
+  const container = document.getElementById('ide-view');
+  container.textContent = '';
+  const { ide, tab } = _ideViewState;
+
+  // ---- SHELL ----
+  const shell = document.createElement('div');
+  shell.style.cssText = 'display:flex;flex-direction:column;height:100vh;max-width:480px;margin:0 auto;background:#0f172a;';
+
+  // Header
+  const hdr = document.createElement('div');
+  hdr.style.cssText = 'background:#1e293b;padding:.85rem 1rem;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #334155;flex-shrink:0;';
+  const hdrLeft = document.createElement('div');
+  const hdrName = document.createElement('div');
+  hdrName.style.cssText = 'color:#f1f5f9;font-weight:700;font-size:1rem;';
+  hdrName.textContent = ide.name.split(' ')[0];
+  const hdrSub = document.createElement('div');
+  hdrSub.style.cssText = 'color:#64748b;font-size:.72rem;';
+  hdrSub.textContent = 'Planning ' + app.year;
+  hdrLeft.appendChild(hdrName);
+  hdrLeft.appendChild(hdrSub);
+  const logoutBtn = document.createElement('button');
+  logoutBtn.style.cssText = 'background:transparent;border:1px solid #334155;color:#94a3b8;border-radius:6px;padding:.3rem .7rem;font-size:.78rem;cursor:pointer;';
+  logoutBtn.textContent = 'Déconnexion';
+  logoutBtn.onclick = doLogout;
+  hdr.appendChild(hdrLeft);
+  hdr.appendChild(logoutBtn);
+  shell.appendChild(hdr);
+
+  // Content area
+  const content = document.createElement('div');
+  content.style.cssText = 'flex:1;overflow-y:auto;';
+  if (tab === 'planning') _ideRenderPlanning(content);
+  else if (tab === 'requests') _ideRenderRequests(content);
+  else if (tab === 'settings') _ideRenderSettings(content);
+  shell.appendChild(content);
+
+  // Bottom nav
+  const nav = document.createElement('div');
+  nav.style.cssText = 'background:#1e293b;border-top:1px solid #334155;display:flex;flex-shrink:0;';
+  [['planning','Planning'],['requests','Requêtes'],['settings','Paramètres']].forEach(([t, label]) => {
+    const btn = document.createElement('button');
+    const active = tab === t;
+    btn.style.cssText = 'flex:1;padding:.75rem .25rem;background:transparent;border:none;border-top:2px solid ' + (active ? '#38bdf8' : 'transparent') + ';cursor:pointer;color:' + (active ? '#38bdf8' : '#64748b') + ';font-size:.82rem;font-weight:' + (active ? '700' : '400') + ';';
+    btn.textContent = label;
+    btn.onclick = () => { _ideViewState.tab = t; _ideRender(); };
+    nav.appendChild(btn);
+  });
+  shell.appendChild(nav);
+  container.appendChild(shell);
+}
+
+function _ideRenderPlanning(container) {
+  const { ide, plan, month } = _ideViewState;
+  const MONTHS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  const DAYS_LONG = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+
+  // Month nav
+  const nav = document.createElement('div');
+  nav.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:.75rem 1rem;background:#1e293b;border-bottom:1px solid #334155;position:sticky;top:0;z-index:1;';
+  const prevBtn = document.createElement('button');
+  prevBtn.style.cssText = 'background:transparent;border:none;color:#94a3b8;font-size:1.3rem;cursor:pointer;padding:.25rem .5rem;';
+  prevBtn.textContent = '‹';
+  prevBtn.onclick = () => { _ideViewState.month = (_ideViewState.month + 11) % 12; _ideRender(); };
+  const monthLabel = document.createElement('span');
+  monthLabel.style.cssText = 'color:#f1f5f9;font-weight:600;font-size:1rem;';
+  monthLabel.textContent = MONTHS_FR[month] + ' ' + app.year;
+  const nextBtn = document.createElement('button');
+  nextBtn.style.cssText = 'background:transparent;border:none;color:#94a3b8;font-size:1.3rem;cursor:pointer;padding:.25rem .5rem;';
+  nextBtn.textContent = '›';
+  nextBtn.onclick = () => { _ideViewState.month = (_ideViewState.month + 1) % 12; _ideRender(); };
+  nav.appendChild(prevBtn);
+  nav.appendChild(monthLabel);
+  nav.appendChild(nextBtn);
+  container.appendChild(nav);
+
+  // Stats bar
+  const days = daysInMonth(app.year, month);
+  let workDays = 0, restDays = 0, caDays = 0;
+  for (let d = 1; d <= days; d++) {
+    const ds = dateStr(app.year, month, d);
+    const code = plan[ds] || '';
+    if (isWorkCode(code)) workDays++;
+    else if (code === 'RH' || code === '-') restDays++;
+    else if (code === 'CA' || code === 'CA-1') caDays++;
+  }
+  const stats = document.createElement('div');
+  stats.style.cssText = 'display:flex;gap:0;background:#0f172a;border-bottom:1px solid #1e293b;';
+  [['Travail',workDays,'#38bdf8'],['Repos',restDays,'#94a3b8'],['CA',caDays,'#4ade80']].forEach(([label, val, color]) => {
+    const s = document.createElement('div');
+    s.style.cssText = 'flex:1;text-align:center;padding:.5rem .25rem;border-right:1px solid #1e293b;';
+    const valEl = document.createElement('div');
+    valEl.style.cssText = 'font-size:1.3rem;font-weight:700;color:' + color + ';';
+    valEl.textContent = val;
+    const lblEl = document.createElement('div');
+    lblEl.style.cssText = 'font-size:.65rem;color:#64748b;';
+    lblEl.textContent = label;
+    s.appendChild(valEl);
+    s.appendChild(lblEl);
+    stats.appendChild(s);
+  });
+  container.appendChild(stats);
+
+  // Day list
+  const list = document.createElement('div');
+  list.style.padding = '.5rem';
+  for (let d = 1; d <= days; d++) {
+    const ds = dateStr(app.year, month, d);
+    const code = plan[ds] || '';
+    const dayObj = new Date(app.year, month, d);
+    const isWE = dayObj.getDay() === 0 || dayObj.getDay() === 6;
+    const codeInfo = app.codes[code] || {};
+    const isWork = isWorkCode(code);
+
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;padding:.6rem .75rem;border-radius:10px;margin-bottom:4px;cursor:pointer;background:' + (isWE ? '#131f2e' : '#0f172a') + ';border:1px solid ' + (isWork ? '#1e40af33' : '#1e293b') + ';';
+    row.onmouseenter = () => { row.style.background = '#1e293b'; };
+    row.onmouseleave = () => { row.style.background = isWE ? '#131f2e' : '#0f172a'; };
+
+    // Date column
+    const dateCol = document.createElement('div');
+    dateCol.style.cssText = 'width:44px;flex-shrink:0;';
+    const dayNum = document.createElement('div');
+    dayNum.style.cssText = 'font-size:1.2rem;font-weight:700;color:' + (isWE ? '#94a3b8' : '#f1f5f9') + ';line-height:1;';
+    dayNum.textContent = d;
+    const dayName = document.createElement('div');
+    dayName.style.cssText = 'font-size:.65rem;color:#64748b;';
+    dayName.textContent = DAYS_LONG[dayObj.getDay()].substring(0,3);
+    dateCol.appendChild(dayNum);
+    dateCol.appendChild(dayName);
+    row.appendChild(dateCol);
+
+    // Code badge
+    const badge = document.createElement('div');
+    const badgeBg = codeInfo.bg || (code ? '#334155' : 'transparent');
+    badge.style.cssText = 'width:48px;flex-shrink:0;text-align:center;padding:.3rem .2rem;border-radius:8px;background:' + badgeBg + ';margin:0 .75rem;';
+    const badgeCode = document.createElement('div');
+    badgeCode.style.cssText = 'font-size:.85rem;font-weight:700;color:#f1f5f9;';
+    badgeCode.textContent = code || '—';
+    badge.appendChild(badgeCode);
+    row.appendChild(badge);
+
+    // Label
+    const labelCol = document.createElement('div');
+    labelCol.style.cssText = 'flex:1;';
+    const labelText = document.createElement('div');
+    labelText.style.cssText = 'font-size:.85rem;color:' + (code ? '#cbd5e1' : '#475569') + ';';
+    labelText.textContent = codeInfo.label || (code ? code : 'Libre');
+    labelCol.appendChild(labelText);
+    row.appendChild(labelCol);
+
+    // Arrow
+    const arrow = document.createElement('div');
+    arrow.style.cssText = 'color:#334155;font-size:.9rem;';
+    arrow.textContent = '›';
+    row.appendChild(arrow);
+
+    const capturedDs = ds;
+    const capturedCode = code;
+    const capturedLabel = codeInfo.label || (code || 'Libre');
+    row.onclick = () => openIdeRequestModal(capturedDs, capturedCode, capturedLabel);
+    list.appendChild(row);
+  }
+  container.appendChild(list);
+}
+
+async function _ideRenderRequests(container) {
+  container.style.padding = '.75rem';
+  const title = document.createElement('h3');
+  title.style.cssText = 'color:#94a3b8;font-size:.85rem;font-weight:600;margin:0 0 .75rem;text-transform:uppercase;letter-spacing:.05em;';
+  title.textContent = 'Mes demandes envoyées';
+  container.appendChild(title);
+
+  const sb = getSB();
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return;
+  const { data: profile } = await sb.from('profiles').select('*').eq('id', session.user.id).single();
+  const { data: reqs } = await sb.from('requests').select('*').eq('ide_id', profile.ide_id).eq('year', app.year).order('created_at', { ascending: false });
+
+  if (!reqs || reqs.length === 0) {
+    const empty = document.createElement('div');
+    empty.style.cssText = 'text-align:center;color:#475569;padding:3rem 1rem;';
+    empty.textContent = 'Aucune demande envoyée.';
+    container.appendChild(empty);
+    return;
+  }
+
+  reqs.forEach(r => {
+    const card = document.createElement('div');
+    card.style.cssText = 'background:#1e293b;border-radius:10px;padding:.85rem;margin-bottom:.6rem;border-left:3px solid ' + (r.status === 'pending' ? '#f59e0b' : r.status === 'accepted' ? '#22c55e' : '#ef4444') + ';';
+    const cardTop = document.createElement('div');
+    cardTop.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;';
+    const dateSpan = document.createElement('span');
+    dateSpan.style.cssText = 'color:#f1f5f9;font-weight:600;font-size:.9rem;';
+    dateSpan.textContent = r.date_str;
+    const statusSpan = document.createElement('span');
+    statusSpan.style.cssText = 'font-size:.75rem;font-weight:600;color:' + (r.status === 'pending' ? '#f59e0b' : r.status === 'accepted' ? '#22c55e' : '#ef4444') + ';';
+    statusSpan.textContent = r.status === 'pending' ? 'En attente' : r.status === 'accepted' ? 'Acceptée' : 'Refusée';
+    cardTop.appendChild(dateSpan);
+    cardTop.appendChild(statusSpan);
+    card.appendChild(cardTop);
+    const msgEl = document.createElement('div');
+    msgEl.style.cssText = 'color:#94a3b8;font-size:.82rem;';
+    msgEl.textContent = r.message;
+    card.appendChild(msgEl);
+    if (r.cadre_response) {
+      const resp = document.createElement('div');
+      resp.style.cssText = 'margin-top:.4rem;color:#64748b;font-size:.78rem;font-style:italic;border-top:1px solid #334155;padding-top:.4rem;';
+      resp.textContent = 'Réponse : ' + r.cadre_response;
+      card.appendChild(resp);
+    }
+    container.appendChild(card);
+  });
+}
+
+function _ideRenderSettings(container) {
+  container.style.padding = '1rem';
+  const title = document.createElement('h3');
+  title.style.cssText = 'color:#94a3b8;font-size:.85rem;font-weight:600;margin:0 0 1rem;text-transform:uppercase;letter-spacing:.05em;';
+  title.textContent = 'Paramètres';
+  container.appendChild(title);
+
+  // Year selector
+  const card = document.createElement('div');
+  card.style.cssText = 'background:#1e293b;border-radius:10px;padding:1rem;margin-bottom:.75rem;';
+  const yearLabel = document.createElement('div');
+  yearLabel.style.cssText = 'color:#94a3b8;font-size:.8rem;margin-bottom:.5rem;';
+  yearLabel.textContent = 'Année affichée';
+  const yearRow = document.createElement('div');
+  yearRow.style.cssText = 'display:flex;align-items:center;gap:.75rem;';
+  const prevY = document.createElement('button');
+  prevY.style.cssText = 'background:#334155;border:none;color:#f1f5f9;border-radius:6px;padding:.3rem .75rem;font-size:1.1rem;cursor:pointer;';
+  prevY.textContent = '‹';
+  prevY.onclick = () => { app.year--; yearDisp.textContent = app.year; };
+  const yearDisp = document.createElement('span');
+  yearDisp.style.cssText = 'color:#f1f5f9;font-weight:700;font-size:1.1rem;flex:1;text-align:center;';
+  yearDisp.textContent = app.year;
+  const nextY = document.createElement('button');
+  nextY.style.cssText = 'background:#334155;border:none;color:#f1f5f9;border-radius:6px;padding:.3rem .75rem;font-size:1.1rem;cursor:pointer;';
+  nextY.textContent = '›';
+  nextY.onclick = () => { app.year++; yearDisp.textContent = app.year; };
+  const applyY = document.createElement('button');
+  applyY.style.cssText = 'background:#2563eb;border:none;color:#fff;border-radius:6px;padding:.3rem .75rem;font-size:.85rem;cursor:pointer;';
+  applyY.textContent = 'OK';
+  applyY.onclick = async () => {
+    const sb = getSB();
+    const { data } = await sb.from('planning_data').select('*').eq('year', app.year).eq('ide_id', _ideViewState.ide.id);
+    const plan = {};
+    if (data) data.forEach(row => { plan[row.date_str] = row.code; });
+    _ideViewState.plan = plan;
+    _ideViewState.month = 0;
+    _ideViewState.tab = 'planning';
+    _ideRender();
+  };
+  yearRow.appendChild(prevY);
+  yearRow.appendChild(yearDisp);
+  yearRow.appendChild(nextY);
+  yearRow.appendChild(applyY);
+  card.appendChild(yearLabel);
+  card.appendChild(yearRow);
+  container.appendChild(card);
+
+  // Profile info
+  const card2 = document.createElement('div');
+  card2.style.cssText = 'background:#1e293b;border-radius:10px;padding:1rem;margin-bottom:.75rem;';
+  const profLabel = document.createElement('div');
+  profLabel.style.cssText = 'color:#94a3b8;font-size:.8rem;margin-bottom:.5rem;';
+  profLabel.textContent = 'Mon profil';
+  const ide = _ideViewState.ide;
+  const roul = app.roulements[ide.roulement];
+  [['Nom', ide.name], ['Initiales', ide.short], ['Temps de travail', ide.pct + '%'], ['Roulement', roul ? roul.name : ide.roulement]].forEach(([k, v]) => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;justify-content:space-between;padding:.3rem 0;border-bottom:1px solid #0f172a;';
+    const key = document.createElement('span');
+    key.style.cssText = 'color:#64748b;font-size:.85rem;';
+    key.textContent = k;
+    const val = document.createElement('span');
+    val.style.cssText = 'color:#f1f5f9;font-size:.85rem;font-weight:600;';
+    val.textContent = v;
+    row.appendChild(key);
+    row.appendChild(val);
+    card2.appendChild(row);
+  });
+  card2.insertBefore(profLabel, card2.firstChild);
+  container.appendChild(card2);
+
+  // Logout
+  const logoutBtn = document.createElement('button');
+  logoutBtn.style.cssText = 'width:100%;background:#334155;border:none;color:#f1f5f9;border-radius:10px;padding:.85rem;font-size:.95rem;cursor:pointer;margin-top:.5rem;';
+  logoutBtn.textContent = 'Déconnexion';
+  logoutBtn.onclick = doLogout;
+  container.appendChild(logoutBtn);
+}
+
+function openIdeRequestModal(ds, code, label) {
+  document.getElementById('ide-req-date').textContent = ds;
+  document.getElementById('ide-req-code').textContent = code ? (code + ' — ' + label) : 'Libre';
+  document.getElementById('ide-req-message').value = '';
+  openModal('ide-request-modal');
+}
+
+async function submitIdeRequest() {
+  const sb = getSB();
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return;
+  const { data: profile } = await sb.from('profiles').select('*').eq('id', session.user.id).single();
+  const msg = document.getElementById('ide-req-message').value.trim();
+  if (!msg) { alert('Merci d\'ecrire un message.'); return; }
+  const ds = document.getElementById('ide-req-date').textContent;
+  const ide = app.ides.find(i => i.id === profile.ide_id);
+  const { error } = await sb.from('requests').insert({
+    ide_id: profile.ide_id,
+    ide_name: ide ? ide.name : 'IDE',
+    date_str: ds,
+    year: app.year,
+    message: msg
+  });
+  if (error) { alert('Erreur : ' + error.message); return; }
+  closeModal('ide-request-modal');
+  _ideViewState.tab = 'requests';
+  _ideRender();
+}
+
+// initApp() démarre tout
+initApp();
+</script>
+
+</div><!-- /app-root -->
+
+<!-- IDE REQUEST MODAL — hors app-root pour rester visible en vue IDE -->
+<div class="overlay" id="ide-request-modal" style="display:none;">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header">
+      <div class="modal-title">Demande au cadre</div>
+      <button class="modal-close" onclick="closeModal('ide-request-modal')">&#215;</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:#0f172a;border-radius:8px;padding:.75rem;margin-bottom:1rem;">
+        <div style="font-size:.75rem;color:#64748b;margin-bottom:.2rem;">Jour sélectionné</div>
+        <div style="font-size:1rem;font-weight:700;color:#f1f5f9;" id="ide-req-date"></div>
+        <div style="font-size:.82rem;color:#94a3b8;margin-top:.15rem;" id="ide-req-code"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Votre message au cadre</label>
+        <textarea class="form-input" id="ide-req-message" rows="4" placeholder="Ex: Je souhaite poser un CA ce jour, ou échanger avec une collègue..." style="font-size:16px;"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('ide-request-modal')">Annuler</button>
+      <button class="btn btn-primary" onclick="submitIdeRequest()">Envoyer</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>
