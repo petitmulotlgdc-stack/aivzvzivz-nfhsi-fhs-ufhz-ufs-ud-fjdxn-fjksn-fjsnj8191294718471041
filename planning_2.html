@@ -2184,25 +2184,7 @@ function updateIde() {
 }
 
 
-// =============================
-// ROTATION EDITOR
-// =============================
-function addRotationCode() {
-  const codes = Object.keys(app.codes).filter(k => app.codes[k].type === 'work');
-  const choice = prompt('Choisir un code de travail a ajouter au roulement :\n' + codes.join(', '));
-  if(!choice) return;
-  const key = choice.trim().toUpperCase();
-  if(!app.codes[key] || app.codes[key].type !== 'work') {
-    alert('Code "' + key + '" non trouve ou pas un code de travail.'); return;
-  }
-  app.workCycle.push(key);
-  renderSettings();
-}
-function removeRotationCode(i) {
-  if(app.workCycle.length <= 1) { alert('Le roulement doit contenir au moins un code.'); return; }
-  app.workCycle.splice(i, 1);
-  renderSettings();
-}
+
 
 // =============================
 // INDIVIDUAL MONTH REGEN
@@ -2783,7 +2765,7 @@ let _ideViewState = { ide: null, plan: null, month: new Date().getMonth(), tab: 
 function renderIdePersonalView(ide, plan) {
   _ideViewState.ide = ide;
   _ideViewState.plan = plan;
-  _ideViewState.month = new Date().getMonth();
+  _ideViewState.month = app.year === new Date().getFullYear() ? new Date().getMonth() : 0;
   _ideRender();
 }
 
