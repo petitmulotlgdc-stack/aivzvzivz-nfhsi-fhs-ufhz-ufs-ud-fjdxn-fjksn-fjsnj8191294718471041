@@ -1225,7 +1225,7 @@ function runGeneration() {
 
   // Codes que l'on ne touche jamais
   const LOCKED_CODES = new Set([
-    'CA','CA-1','CET','HS','HS-1','FR','AM','FCJ','FCH','?','RJF','H-','H+P','H+R'
+    'CA','CA-1','CET','HS','HS-1','FR','AM','FCJ','FCH','?','H-','H+P','H+R'
   ]);
 
   const WE_PLACEHOLDER = '__WE__'; // marqueur temporaire pour les jours WE à travailler
@@ -2083,7 +2083,7 @@ function removeCode(key) {
 // =============================
 function clearGeneration() {
   if(!confirm('Supprimer toute la génération ?\nLes CA, HS, FR et absences sont préservés. Tout le reste sera effacé.')) return;
-  const LOCKED = new Set(['CA','CA-1','CET','HS','HS-1','FR','AM','FCJ','FCH','?','RJF','H-','H+P','H+R']);
+  const LOCKED = new Set(['CA','CA-1','CET','HS','HS-1','FR','AM','FCJ','FCH','?','H-','H+P','H+R']);
   app.ides.forEach(ide => {
     const plan = app.planning[ide.id] || {};
     const kept = {};
@@ -2226,7 +2226,7 @@ function regenIdeMonth(ideId, monthIdx) {
   const ideIdx = app.ides.findIndex(i => i.id === ideId);
 
   const holidays = frenchHolidays(app.year);
-  const LOCKED_CODES = new Set(['CA','CA-1','CET','HS','HS-1','FR','AM','FCJ','FCH','?','RJF','H-','H+P','H+R']);
+  const LOCKED_CODES = new Set(['CA','CA-1','CET','HS','HS-1','FR','AM','FCJ','FCH','?','H-','H+P','H+R']);
   const roulDef = app.roulements[ide.roulement];
   const WORK_CYCLE = roulDef ? roulDef.cycle : ['JM2','JS2','J05'];
   const WE_PLACEHOLDER = '__WE__';
