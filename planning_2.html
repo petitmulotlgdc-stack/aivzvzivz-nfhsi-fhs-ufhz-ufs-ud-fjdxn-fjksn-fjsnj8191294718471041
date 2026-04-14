@@ -1253,6 +1253,12 @@ function runGeneration() {
   setTimeout(() => {
     prog(10, 'Verrouillage des congés et fériés…');
 
+    // ── Effacer les RJF existants (recalculés à chaque génération) ────
+    app.ides.forEach(ide => {
+      const prev = app.planning[ide.id] || {};
+      Object.keys(prev).forEach(ds => { if (prev[ds] === 'RJF') delete prev[ds]; });
+    });
+
     // ── Carte des jours verrouillés par IDE ───────────────────────────
     const locked = {};
     app.ides.forEach(ide => {
