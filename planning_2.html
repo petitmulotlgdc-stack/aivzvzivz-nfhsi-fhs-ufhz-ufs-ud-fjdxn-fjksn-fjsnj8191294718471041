@@ -5,37 +5,43 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Planning IDE — Médecine</title>
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 :root {
-  --bg: #f5f4f0;
+  --bg: #EEF2F7;
   --surface: #ffffff;
-  --surface2: #f0eeea;
-  --border: #dddbd6;
-  --border2: #ccc9c3;
-  --text: #1a1916;
-  --text2: #5a5855;
-  --text3: #9a9895;
-  --accent: #1a5c8a;
-  --accent-light: #e6f0f7;
-  --accent2: #2e7d52;
-  --accent2-light: #e6f3ec;
-  --warn: #b85c00;
-  --warn-light: #fef3e6;
-  --danger: #a02020;
-  --danger-light: #fdeaea;
-  --success: #2e7d52;
-  --radius: 6px;
-  --radius-lg: 10px;
-  --shadow: 0 1px 3px rgba(0,0,0,0.07);
+  --surface2: #F7F9FC;
+  --border: #DDE3ED;
+  --border2: #C8D0DF;
+  --text: #0D1B2E;
+  --text2: #4A5568;
+  --text3: #94A3B8;
+  --accent: #0057A8;
+  --accent-hover: #004A8F;
+  --accent-light: #E8F1FB;
+  --accent2: #0D8A5E;
+  --accent2-light: #E6F5EE;
+  --warn: #C05800;
+  --warn-light: #FEF3E6;
+  --danger: #C0252D;
+  --danger-light: #FDEAEA;
+  --success: #0D8A5E;
+  --radius: 7px;
+  --radius-lg: 12px;
+  --shadow-sm: 0 1px 3px rgba(13,27,46,0.07);
+  --shadow: 0 2px 8px rgba(13,27,46,0.09);
+  --shadow-lg: 0 4px 20px rgba(13,27,46,0.12);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  font-family: 'DM Sans', 'Helvetica Neue', sans-serif;
+  font-family: 'Inter', 'Helvetica Neue', sans-serif;
   background: var(--bg);
   color: var(--text);
   font-size: 14px;
   min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* HEADER */
@@ -46,65 +52,95 @@ body {
   display: flex;
   align-items: center;
   gap: 16px;
-  height: 56px;
+  height: 58px;
   position: sticky;
   top: 0;
   z-index: 100;
+  box-shadow: var(--shadow-sm);
 }
 .app-logo {
+  display: flex;
+  align-items: center;
+  gap: 9px;
   font-size: 15px;
-  font-weight: 600;
-  letter-spacing: -0.3px;
+  font-weight: 700;
+  letter-spacing: -0.4px;
   color: var(--accent);
+  text-decoration: none;
 }
-.app-logo span { color: var(--text3); font-weight: 400; }
+.app-logo::before {
+  content: '✚';
+  width: 28px;
+  height: 28px;
+  background: var(--accent);
+  color: white;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+.app-logo span { color: var(--text3); font-weight: 400; font-size: 13px; }
 .header-tabs {
   display: flex;
-  gap: 2px;
-  margin-left: 16px;
+  gap: 1px;
+  margin-left: 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) + 2px);
+  padding: 3px;
 }
 .header-tab {
-  padding: 6px 14px;
+  padding: 5px 14px;
   border-radius: var(--radius);
   border: none;
   background: none;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12.5px;
+  font-weight: 500;
   color: var(--text2);
   transition: all 0.15s;
+  letter-spacing: -0.1px;
 }
-.header-tab:hover { background: var(--surface2); color: var(--text); }
-.header-tab.active { background: var(--accent-light); color: var(--accent); font-weight: 500; }
+.header-tab:hover { color: var(--text); }
+.header-tab.active { background: var(--surface); color: var(--accent); font-weight: 600; box-shadow: var(--shadow-sm); }
 .header-right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
 .btn {
-  padding: 7px 14px;
+  padding: 6px 14px;
   border-radius: var(--radius);
   border: 1px solid var(--border2);
   background: var(--surface);
-  color: var(--text);
+  color: var(--text2);
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12.5px;
+  font-weight: 500;
+  font-family: inherit;
   transition: all 0.15s;
   white-space: nowrap;
+  letter-spacing: -0.1px;
 }
-.btn:hover { background: var(--surface2); }
+.btn:hover { background: var(--surface2); color: var(--text); border-color: var(--border2); }
 .btn-primary {
   background: var(--accent);
   color: white;
   border-color: var(--accent);
+  font-weight: 600;
 }
-.btn-primary:hover { background: #154d75; }
+.btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
 .btn-success {
   background: var(--accent2);
   color: white;
   border-color: var(--accent2);
+  font-weight: 600;
 }
-.btn-success:hover { background: #246342; }
-.btn-danger { background: var(--danger); color: white; border-color: var(--danger); }
-.btn-danger:hover { background: #8a1818; }
+.btn-success:hover { background: #0a7350; }
+.btn-danger { background: var(--danger); color: white; border-color: var(--danger); font-weight: 600; }
+.btn-danger:hover { background: #a01e25; }
+.btn-sm { padding: 4px 10px; font-size: 11.5px; }
 
 /* LAYOUT */
-.app-body { display: flex; height: calc(100vh - 56px); }
+.app-body { display: flex; height: calc(100vh - 58px); }
 .sidebar {
   width: 280px;
   background: var(--surface);
@@ -138,7 +174,7 @@ body {
   margin-bottom: 3px;
 }
 .ide-card:hover { background: var(--surface2); }
-.ide-card.selected { background: var(--accent-light); }
+.ide-card.selected { background: var(--accent-light); border-left: 3px solid var(--accent); padding-left: 7px; }
 .ide-avatar {
   width: 32px;
   height: 32px;
@@ -238,22 +274,29 @@ body {
   border-radius: var(--radius-lg);
   border: 1px solid var(--border);
   overflow: hidden;
+  box-shadow: var(--shadow-sm);
 }
 .month-header {
-  background: var(--text);
+  background: linear-gradient(135deg, #0057A8 0%, #0073D4 100%);
   color: white;
-  padding: 10px 16px;
+  padding: 9px 16px;
   font-size: 13px;
   font-weight: 600;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.2px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
 }
 .month-header .month-stats {
   font-size: 11px;
   font-weight: 400;
-  opacity: 0.7;
+  opacity: 0.8;
+}
+.month-header .month-actions {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
 }
 
 .grid-table {
@@ -487,13 +530,18 @@ body {
   border-radius: var(--radius-lg);
   border: 1px solid var(--border);
   padding: 20px;
+  box-shadow: var(--shadow-sm);
 }
 .settings-card-title {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   margin-bottom: 14px;
   padding-bottom: 10px;
   border-bottom: 1px solid var(--border);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 .ide-list-item {
   display: flex;
@@ -506,11 +554,12 @@ body {
 .tag-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 0;
-  border-bottom: 1px solid var(--border);
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: var(--radius);
+  background: var(--surface2);
+  border: 1px solid var(--border);
 }
-.tag-item:last-child { border-bottom: none; }
 .tag-badge {
   padding: 2px 8px;
   border-radius: 4px;
@@ -519,7 +568,7 @@ body {
   min-width: 50px;
   text-align: center;
 }
-.tag-desc { font-size: 12px; color: var(--text2); flex: 1; }
+.tag-desc { font-size: 12px; color: var(--text2); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .color-dot {
   width: 10px;
   height: 10px;
@@ -605,6 +654,31 @@ body {
   flex-shrink: 0;
 }
 
+/* SCROLLBAR */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+/* EMPTY STATE */
+.empty-state {
+  text-align: center;
+  padding: 32px 16px;
+  color: var(--text3);
+  font-size: 13px;
+}
+.empty-state-icon {
+  font-size: 28px;
+  margin-bottom: 8px;
+  opacity: 0.5;
+}
+
+/* FOCUS */
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
 /* Print */
 @media print {
   .sidebar, .app-header, .planning-controls { display: none; }
@@ -613,18 +687,19 @@ body {
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#1a5c8a">
+  <meta name="theme-color" content="#0057A8">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="PlanningIDE">
 </head>
 <body>
 
 <!-- LOGIN SCREEN -->
-<div id="login-screen" style="display:none;position:fixed;inset:0;z-index:9999;background:#0f172a;align-items:center;justify-content:center;">
-  <div style="background:#1e293b;border-radius:16px;padding:2rem;width:340px;box-shadow:0 8px 32px rgba(0,0,0,.6);">
-    <div style="text-align:center;margin-bottom:1.5rem;">
-      <h2 style="color:#f1f5f9;font-size:1.25rem;font-weight:700;margin:0;">PlanningIDE</h2>
-      <p style="color:#64748b;font-size:.8rem;margin:.25rem 0 0;">Médecine 2</p>
+<div id="login-screen" style="display:none;position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#0A1F3D 0%,#0057A8 100%);align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:16px;padding:2.25rem;width:360px;box-shadow:0 20px 60px rgba(0,0,0,.35);">
+    <div style="text-align:center;margin-bottom:1.75rem;">
+      <div style="width:52px;height:52px;background:linear-gradient(135deg,#0057A8,#0073D4);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;color:white;margin:0 auto .75rem;box-shadow:0 4px 12px rgba(0,87,168,.35);">✚</div>
+      <h2 style="color:#0D1B2E;font-size:1.2rem;font-weight:700;margin:0;font-family:Inter,sans-serif;">Planning IDE</h2>
+      <p style="color:#94A3B8;font-size:.8rem;margin:.3rem 0 0;font-weight:500;">Service de Médecine 2</p>
     </div>
     <div class="form-group">
       <label class="form-label">Email</label>
@@ -796,7 +871,7 @@ body {
             <div class="settings-card-title" style="margin:0;">Codes d'affectation</div>
             <button class="btn btn-primary" style="font-size:12px;padding:4px 12px;" onclick="showAddCodeModal()">+ Ajouter</button>
           </div>
-          <div id="codes-list" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+          <div id="codes-list" style="display:flex;flex-direction:column;gap:4px;"></div>
         </div>
 
       </div>
@@ -1889,26 +1964,35 @@ function renderDashboard() {
     const balSign = s.balance>=0?'+':'';
     const pctFill = Math.min(100,s.pct);
     const fillClass = s.pct > 102 ? 'over' : s.pct > 95 ? 'good' : 'near';
+    const balColor = Math.abs(s.balance)<20?'var(--success)':Math.abs(s.balance)<60?'var(--warn)':'var(--danger)';
+    const accentColor = ide.color.text || 'var(--accent)';
     return `
-    <div class="settings-card" style="padding:16px;">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
-        <div class="ide-avatar" style="background:${ide.color.bg};color:${ide.color.text};width:38px;height:38px;font-size:12px;">${ide.short}</div>
-        <div>
-          <div style="font-weight:600;font-size:13px;">${ide.name}</div>
-          <div style="font-size:11px;color:var(--text3);">${ide.pct}% · objectif ${s.target}h</div>
+    <div class="settings-card" style="padding:0;overflow:hidden;">
+      <div style="height:4px;background:${accentColor};opacity:0.7;"></div>
+      <div style="padding:14px 16px 16px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+          <div class="ide-avatar" style="background:${ide.color.bg};color:${ide.color.text};width:38px;height:38px;font-size:12px;">${ide.short}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:600;font-size:13px;">${ide.name}</div>
+            <div style="font-size:11px;color:var(--text3);">${ide.pct}% · objectif ${s.target}h</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:15px;font-weight:700;color:${balColor};">${balSign}${s.balance}h</div>
+            <div style="font-size:10px;color:var(--text3);">balance</div>
+          </div>
+        </div>
+        <div class="progress-bar" style="margin-bottom:4px;height:8px;border-radius:4px;"><div class="progress-fill ${fillClass}" style="width:${pctFill}%;border-radius:4px;"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:10px;">
+          <span>${s.workedH}h / ${s.target}h</span>
+          <span>${s.pct}%</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;">
+          ${row('Jours travaillés', s.worked, '')}
+          ${row('CA/congés', s.ca, '')}
+          ${row('Repos comp.', s.recuper, '')}
+          ${row('Dim. travaillés', s.workedSundays, s.workedSundays>=20?'stat-ok':'stat-warn')}
         </div>
       </div>
-      <div class="progress-bar" style="margin-bottom:6px;"><div class="progress-fill ${fillClass}" style="width:${pctFill}%"></div></div>
-      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-bottom:10px;">
-        <span>${s.workedH}h réalisées</span>
-        <span style="color:${Math.abs(s.balance)<20?'var(--success)':Math.abs(s.balance)<60?'var(--warn)':'var(--danger)'};">
-          ${balSign}${s.balance}h
-        </span>
-      </div>
-      ${row('Jours travaillés', s.worked, '')}
-      ${row('CA/congés', s.ca, '')}
-      ${row('Repos comp.', s.recuper, '')}
-      ${row('Dim. travaillés', s.workedSundays, s.workedSundays>=20?'stat-ok':'stat-warn')}
     </div>`;
   }).join('');
 
@@ -1916,7 +2000,7 @@ function renderDashboard() {
   const v = checkViolations();
   const vEl = document.getElementById('violations-detail');
   if(!v.length) {
-    vEl.innerHTML = '<div class="alert alert-success">✓ Aucune violation</div>';
+    vEl.innerHTML = '<div class="alert alert-success">✓ Aucune violation détectée</div>';
   } else {
     vEl.innerHTML = v.map(vi => `
       <div class="violation-item">
@@ -1925,6 +2009,58 @@ function renderDashboard() {
       </div>
     `).join('');
   }
+
+  // Coverage chart
+  _renderCoverageChart();
+}
+
+function _renderCoverageChart() {
+  const el = document.getElementById('coverage-chart');
+  const allDates = allDatesOfYear(app.year);
+  if (!allDates.length || !app.ides.length) {
+    el.innerHTML = '<div style="color:var(--text3);font-size:12px;text-align:center;padding:20px 0;">Générer le planning pour voir la couverture.</div>';
+    return;
+  }
+  // Check if any planning data exists
+  let hasData = false;
+  app.ides.forEach(ide => { if (Object.keys(app.planning[ide.id]||{}).length) hasData = true; });
+  if (!hasData) {
+    el.innerHTML = '<div style="color:var(--text3);font-size:12px;text-align:center;padding:20px 0;">Générer le planning pour voir la couverture.</div>';
+    return;
+  }
+
+  // Aggregate per month: count days with <min coverage and exact/over coverage
+  const monthlyCov = Array.from({length:12}, () => ({ ok:0, under:0, total:0 }));
+  allDates.forEach(ds => {
+    const [y,m] = ds.split('-').map(Number);
+    const mi = m - 1;
+    let count = 0;
+    app.ides.forEach(ide => { if (isWorkCode((app.planning[ide.id]||{})[ds])) count++; });
+    monthlyCov[mi].total++;
+    if (count >= app.minIdePerjour) monthlyCov[mi].ok++;
+    else monthlyCov[mi].under++;
+  });
+
+  const MONTHS_SHORT = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+  el.innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:5px;">
+      ${monthlyCov.map((mc, i) => {
+        if (mc.total === 0) return '';
+        const pctOk = Math.round(mc.ok / mc.total * 100);
+        const barColor = mc.under === 0 ? 'var(--accent2)' : mc.under <= 3 ? 'var(--warn)' : 'var(--danger)';
+        return `<div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:28px;font-size:10px;color:var(--text3);flex-shrink:0;text-align:right;">${MONTHS_SHORT[i]}</div>
+          <div style="flex:1;height:12px;border-radius:3px;background:var(--surface2);overflow:hidden;">
+            <div style="height:100%;width:${pctOk}%;background:${barColor};border-radius:3px;transition:width 0.4s;"></div>
+          </div>
+          <div style="width:36px;font-size:10px;color:var(--text2);flex-shrink:0;">${mc.under ? '<span style="color:var(--danger);">-'+mc.under+'j</span>' : '<span style="color:var(--accent2);">✓</span>'}</div>
+        </div>`;
+      }).join('')}
+      <div style="display:flex;gap:12px;margin-top:6px;font-size:10px;color:var(--text3);">
+        <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--accent2);margin-right:3px;"></span>Couverture OK</span>
+        <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--danger);margin-right:3px;"></span>Jours en sous-effectif</span>
+      </div>
+    </div>`;
 }
 
 function renderSettings() {
@@ -1954,7 +2090,7 @@ function renderSettings() {
         const dayNames = ['Di','Lu','Ma','Me','Je','Ve','Sa'];
         r.weeks.forEach((w, wi) => {
           const chip = document.createElement('span');
-          chip.style.cssText = 'font-size:10px;padding:2px 6px;border-radius:3px;background:var(--bg2);margin:1px;display:inline-block;';
+          chip.style.cssText = 'font-size:10px;padding:2px 6px;border-radius:3px;background:var(--surface2);border:1px solid var(--border);margin:1px;display:inline-block;color:var(--text2);';
           const worked = [1,2,3,4,5,6,0].filter(d => w[d]==='W'||w[d]==='O').map(d => dayNames[d]).join(' ');
           chip.textContent = 'S'+(wi+1)+' : '+(worked||'repos');
           cycleDiv.appendChild(chip);
@@ -2778,7 +2914,7 @@ function refreshAll() {
 // =============================
 const SUPABASE_URL = 'https://svcelyavtkgxwhtkyqll.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN2Y2VseWF2dGtneHdodGt5cWxsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxMDI0OTQsImV4cCI6MjA5MTY3ODQ5NH0.1LzhNSMGQYQnlkjhVM6TE67DVbs23IJhJ9hc57XgvN8';
-const SUPABASE_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN2Y2VseWF2dGtneHdodGt5cWxsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjEwMjQ5NCwiZXhwIjoyMDkxNjc4NDk0fQ.4vKXy9LMmts3r0WPbyZlWGEaJ-gx55Kf5hJhLwzOqxg'; // Supabase → Settings → API → service_role
+const SUPABASE_SERVICE_KEY = 'VOTRE_SERVICE_ROLE_KEY'; // Supabase → Settings → API → service_role
 let _sb = null;
 function getSB() {
   if (!_sb) {
@@ -2840,9 +2976,7 @@ async function doLogin() {
 
 async function handleLogin(user) {
   const sb = getSB();
-  console.log('[handleLogin] user:', user.email, user.id);
-  const { data: profile, error: profileErr } = await sb.from('profiles').select('*').eq('id', user.id).single();
-  console.log('[handleLogin] profile:', profile, 'error:', profileErr);
+  const { data: profile } = await sb.from('profiles').select('*').eq('id', user.id).single();
   if (!profile) {
     document.getElementById('login-error').textContent = 'Profil introuvable. Contactez le cadre.';
     showLoginScreen();
@@ -2861,7 +2995,6 @@ async function handleLogin(user) {
   } else {
     document.getElementById('logout-btn').style.display = '';
     await loadAppConfig();
-    console.log('[IDE] ide_id:', profile.ide_id, '| must_change_password:', profile.must_change_password, '| ides trouvées:', app.ides.map(i=>i.id));
     if (profile.must_change_password) {
       // Premier login : forcer le changement de mot de passe avant tout accès
       showIdeView();
@@ -3064,9 +3197,9 @@ async function loadPlanningFromSupabase() {
 // =============================
 let _pollInterval = null;
 function startRequestsPolling() {
-  loadRequests();
+  loadRequests().catch(() => {});
   if (_pollInterval) clearInterval(_pollInterval);
-  _pollInterval = setInterval(loadRequests, 30000);
+  _pollInterval = setInterval(() => loadRequests().catch(() => {}), 30000);
 }
 
 async function loadRequests() {
@@ -3131,11 +3264,11 @@ function renderRequestsCadre(reqs) {
       const btnOk = document.createElement('button');
       btnOk.className = 'btn btn-success btn-sm';
       btnOk.textContent = 'Accepter';
-      btnOk.onclick = () => respondRequest(r.id, 'accepted');
+      btnOk.onclick = async () => respondRequest(r.id, 'accepted');
       const btnKo = document.createElement('button');
       btnKo.className = 'btn btn-danger btn-sm';
       btnKo.textContent = 'Refuser';
-      btnKo.onclick = () => respondRequest(r.id, 'rejected');
+      btnKo.onclick = async () => respondRequest(r.id, 'rejected');
       actions.appendChild(input);
       actions.appendChild(btnOk);
       actions.appendChild(btnKo);
