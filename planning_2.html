@@ -2275,8 +2275,9 @@ async function confirmAddIde() {
     const result = await res.json();
     if (!res.ok) throw new Error(result.error || 'Erreur création compte');
 
-    // 3. Ajouter l'IDE localement
+    // 3. Ajouter l'IDE localement et sauvegarder
     app.ides.push(newIde);
+    await saveIdesConfig();
     closeModal('ide-modal');
     refreshAll();
     setTimeout(() => alert(`✅ Compte créé pour ${name} !\nEmail : ${email}\nL'IDE peut se connecter immédiatement avec ce mot de passe.`), 100);
@@ -2289,11 +2290,12 @@ async function confirmAddIde() {
   }
 }
 
-function removeIde(idx) {
+async function removeIde(idx) {
   if(!confirm(`Supprimer ${app.ides[idx].name} ? Les données de planning seront perdues.`)) return;
   const id = app.ides[idx].id;
   delete app.planning[id];
   app.ides.splice(idx, 1);
+  await saveIdesConfig();
   refreshAll();
 }
 
@@ -2417,7 +2419,7 @@ function editIde(idx) {
   openModal('ide-modal');
 }
 
-function updateIde() {
+async function updateIde() {
   const idx = app.editingIdeIdx;
   if(idx === null || idx === undefined) return;
   const ide = app.ides[idx];
@@ -2431,6 +2433,7 @@ function updateIde() {
   const btn = document.getElementById('ide-modal-confirm-btn');
   btn.onclick = confirmAddIde;
   btn.textContent = 'Ajouter';
+  await saveIdesConfig();
   closeModal('ide-modal');
   refreshAll();
 }
@@ -2833,6 +2836,7 @@ async function handleLogin(user) {
     document.getElementById('logout-btn').style.display = '';
     document.getElementById('tab-btn-requests').style.display = '';
     showCadreView();
+    await loadAppConfig();
     await loadPlanningFromSupabase();
     refreshAll();
     startRequestsPolling();
@@ -2924,6 +2928,25 @@ async function publishPlanning() {
 
 // =============================
 // LOAD FROM SUPABASE (cadre)
+// =============================
+// APP CONFIG (ides, codes, roulements)
+// =============================
+async function saveIdesConfig() {
+  const sb = getSB();
+  await sb.from('app_config').upsert({ key: 'ides', value: app.ides, updated_at: new Date().toISOString() });
+}
+
+async function loadAppConfig() {
+  const sb = getSB();
+  const { data } = await sb.from('app_config').select('key, value');
+  if (!data) return;
+  data.forEach(row => {
+    if (row.key === 'ides' && Array.isArray(row.value) && row.value.length > 0) {
+      app.ides = row.value;
+    }
+  });
+}
+
 // =============================
 async function loadPlanningFromSupabase() {
   const sb = getSB();
