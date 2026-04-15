@@ -1930,35 +1930,71 @@ function renderDashboard() {
 function renderSettings() {
   // Roulements list
   const rl = document.getElementById('roulements-list');
-  const rHtml = Object.keys(app.roulements).map(key => {
-    const r = app.roulements[key];
-    let cycleHtml;
-    if (r.type === 'weekly6') {
-      // Roulement 6 semaines : afficher un résumé compact
-      const dayNames = ['Di','Lu','Ma','Me','Je','Ve','Sa'];
-      const weekSummary = r.weeks.map((w, wi) => {
-        const worked = [1,2,3,4,5,6,0].filter(d => w[d] === 'W' || w[d] === 'O')
-          .map(d => (w[d] === 'O' ? '<span style="opacity:.6;">' : '') + dayNames[d] + (w[d] === 'O' ? '</span>' : '')).join(' ');
-        return '<span style="font-size:10px;padding:2px 6px;border-radius:3px;background:var(--bg2);margin:1px;">S' + (wi+1) + ' : ' + (worked||'repos') + '</span>';
-      }).join('');
-      cycleHtml = '<div style="display:flex;flex-wrap:wrap;gap:2px;">' + weekSummary + '</div>';
-    } else {
-      cycleHtml = (r.cycle || []).map((code, ci) => {
-        const c = app.codes[code] || { bg:'#eee', text:'#555' };
-        const arr = ci > 0 ? '<span style="color:var(--text3);margin:0 3px;">&rarr;</span>' : '';
-        return arr + '<span style="padding:3px 8px;border-radius:4px;font-size:11px;font-weight:700;display:inline-block;background:' + c.bg + ';color:' + c.text + ';">' + code + '</span>';
-      }).join('');
-    }
-    const usedBy = app.ides.filter(i => i.roulement === key).map(i => i.short).join(', ') || '-';
-    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">' +
-      '<div style="min-width:90px;font-weight:600;font-size:12px;">' + r.name + '</div>' +
-      '<div style="flex:1;">' + cycleHtml + '</div>' +
-      '<div style="font-size:11px;color:var(--text3);min-width:80px;">IDE : ' + usedBy + '</div>' +
-      '<button class="btn" style="padding:3px 8px;font-size:11px;" onclick="showEditRoulementModal(' + JSON.stringify(key) + ')">Modifier</button>' +
-      '<button class="btn" style="padding:3px 8px;font-size:11px;" onclick="removeRoulement(' + JSON.stringify(key) + ')">X</button>' +
-      '</div>';
-  }).join('');
-  rl.innerHTML = rHtml || '<div style="color:var(--text3);font-size:12px;">Aucun roulement.</div>';
+  rl.textContent = '';
+  const rKeys = Object.keys(app.roulements);
+  if (!rKeys.length) {
+    const empty = document.createElement('div');
+    empty.style.cssText = 'color:var(--text3);font-size:12px;';
+    empty.textContent = 'Aucun roulement.';
+    rl.appendChild(empty);
+  } else {
+    rKeys.forEach(key => {
+      const r = app.roulements[key];
+
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);';
+
+      const nameDiv = document.createElement('div');
+      nameDiv.style.cssText = 'min-width:90px;font-weight:600;font-size:12px;';
+      nameDiv.textContent = r.name;
+
+      const cycleDiv = document.createElement('div');
+      cycleDiv.style.flex = '1';
+      if (r.type === 'weekly6') {
+        const dayNames = ['Di','Lu','Ma','Me','Je','Ve','Sa'];
+        r.weeks.forEach((w, wi) => {
+          const chip = document.createElement('span');
+          chip.style.cssText = 'font-size:10px;padding:2px 6px;border-radius:3px;background:var(--bg2);margin:1px;display:inline-block;';
+          const worked = [1,2,3,4,5,6,0].filter(d => w[d]==='W'||w[d]==='O').map(d => dayNames[d]).join(' ');
+          chip.textContent = 'S'+(wi+1)+' : '+(worked||'repos');
+          cycleDiv.appendChild(chip);
+        });
+      } else {
+        (r.cycle||[]).forEach((code, ci) => {
+          if (ci > 0) { const arr = document.createElement('span'); arr.style.cssText='color:var(--text3);margin:0 3px;'; arr.textContent='→'; cycleDiv.appendChild(arr); }
+          const c = app.codes[code] || { bg:'#eee', text:'#555' };
+          const badge = document.createElement('span');
+          badge.style.cssText = 'padding:3px 8px;border-radius:4px;font-size:11px;font-weight:700;display:inline-block;background:'+c.bg+';color:'+c.text+';';
+          badge.textContent = code;
+          cycleDiv.appendChild(badge);
+        });
+      }
+
+      const usedBy = app.ides.filter(i => i.roulement === key).map(i => i.short).join(', ') || '-';
+      const usedDiv = document.createElement('div');
+      usedDiv.style.cssText = 'font-size:11px;color:var(--text3);min-width:80px;';
+      usedDiv.textContent = 'IDE : ' + usedBy;
+
+      const editBtn = document.createElement('button');
+      editBtn.className = 'btn';
+      editBtn.style.cssText = 'padding:3px 8px;font-size:11px;';
+      editBtn.textContent = 'Modifier';
+      editBtn.addEventListener('click', () => showEditRoulementModal(key));
+
+      const delBtn = document.createElement('button');
+      delBtn.className = 'btn';
+      delBtn.style.cssText = 'padding:3px 8px;font-size:11px;';
+      delBtn.textContent = '✕';
+      delBtn.addEventListener('click', () => removeRoulement(key));
+
+      row.appendChild(nameDiv);
+      row.appendChild(cycleDiv);
+      row.appendChild(usedDiv);
+      row.appendChild(editBtn);
+      row.appendChild(delBtn);
+      rl.appendChild(row);
+    });
+  }
 
     // IDE list
   const el = document.getElementById('settings-ide-list');
@@ -2184,10 +2220,6 @@ async function confirmAddIde() {
   if (!name || !short) return alert('Nom et initiales requis.');
   if (!email) return alert('Adresse email requise pour créer le compte.');
   if (password.length < 8) return alert('Le mot de passe doit contenir au moins 8 caractères.');
-  if (SUPABASE_SERVICE_KEY === 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN2Y2VseWF2dGtneHdodGt5cWxsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjEwMjQ5NCwiZXhwIjoyMDkxNjc4NDk0fQ.4vKXy9LMmts3r0WPbyZlWGEaJ-gx55Kf5hJhLwzOqxg') {
-    return alert('⚠️ Service role key non configurée.\nRenseigne SUPABASE_SERVICE_KEY dans le fichier HTML (Supabase → Settings → API → service_role).');
-  }
-
   const btn = document.getElementById('ide-modal-confirm-btn');
   btn.disabled = true;
   btn.textContent = 'Création…';
@@ -2201,36 +2233,21 @@ async function confirmAddIde() {
       roulement, roulementOffset
     };
 
-    // 2. Créer le compte via l'API Admin Supabase (ne déconnecte PAS l'admin)
-    //    email_confirm:true = compte actif immédiatement, sans email de confirmation
-    const adminHeaders = {
-      'Content-Type': 'application/json',
-      'apikey': SUPABASE_SERVICE_KEY,
-      'Authorization': 'Bearer ' + SUPABASE_SERVICE_KEY
-    };
-
-    const userRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/users`, {
+    // 2. Appeler l'Edge Function (service role key côté serveur uniquement)
+    const sb = getSB();
+    const { data: { session } } = await sb.auth.getSession();
+    const res = await fetch(CREATE_IDE_USER_FN, {
       method: 'POST',
-      headers: adminHeaders,
-      body: JSON.stringify({ email, password, email_confirm: true })
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + session.access_token
+      },
+      body: JSON.stringify({ email, password, display_name: name, ide_id: newIde.id })
     });
-    const userData = await userRes.json();
-    if (!userRes.ok) throw new Error('Erreur création compte : ' + (userData.message || userData.msg || JSON.stringify(userData)));
-    const userId = userData.id;
-    if (!userId) throw new Error('ID utilisateur introuvable dans la réponse Supabase.');
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.error || 'Erreur création compte');
 
-    // 3. Insérer le profil via l'API REST (service role = bypass RLS)
-    const profileRes = await fetch(`${SUPABASE_URL}/rest/v1/profiles`, {
-      method: 'POST',
-      headers: { ...adminHeaders, 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ id: userId, role: 'ide', ide_id: newIde.id, display_name: name, must_change_password: true })
-    });
-    if (!profileRes.ok) {
-      const err = await profileRes.json().catch(() => ({}));
-      throw new Error('Compte créé mais erreur profil : ' + (err.message || profileRes.status));
-    }
-
-    // 4. Ajouter l'IDE localement
+    // 3. Ajouter l'IDE localement
     app.ides.push(newIde);
     closeModal('ide-modal');
     refreshAll();
@@ -2713,8 +2730,8 @@ function refreshAll() {
 // =============================
 const SUPABASE_URL = 'https://svcelyavtkgxwhtkyqll.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN2Y2VseWF2dGtneHdodGt5cWxsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxMDI0OTQsImV4cCI6MjA5MTY3ODQ5NH0.1LzhNSMGQYQnlkjhVM6TE67DVbs23IJhJ9hc57XgvN8';
-// Service role key — Supabase > Settings > API > service_role (ne jamais exposer publiquement)
-const SUPABASE_SERVICE_KEY = 'VOTRE_SERVICE_ROLE_KEY';
+// URL de l'Edge Function de création de compte IDE
+const CREATE_IDE_USER_FN = SUPABASE_URL + '/functions/v1/create-ide-user';
 let _sb = null;
 function getSB() {
   if (!_sb) {
@@ -3154,9 +3171,10 @@ function _ideRenderPlanning(container) {
     // Code badge
     const badge = document.createElement('div');
     const badgeBg = codeInfo.bg || (code ? '#334155' : 'transparent');
+    const badgeText = codeInfo.text || '#f1f5f9';
     badge.style.cssText = 'width:48px;flex-shrink:0;text-align:center;padding:.3rem .2rem;border-radius:8px;background:' + badgeBg + ';margin:0 .75rem;';
     const badgeCode = document.createElement('div');
-    badgeCode.style.cssText = 'font-size:.85rem;font-weight:700;color:#f1f5f9;';
+    badgeCode.style.cssText = 'font-size:.85rem;font-weight:700;color:' + badgeText + ';';
     badgeCode.textContent = code || '—';
     badge.appendChild(badgeCode);
     row.appendChild(badge);
