@@ -2261,19 +2261,12 @@ async function confirmAddIde() {
       roulement, roulementOffset
     };
 
-    // 2. Appeler l'Edge Function (service role key côté serveur uniquement)
+    // 2. Appeler l'Edge Function via le client Supabase (gère auth + CORS automatiquement)
     const sb = getSB();
-    const { data: { session } } = await sb.auth.getSession();
-    const res = await fetch(CREATE_IDE_USER_FN, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + session.access_token
-      },
-      body: JSON.stringify({ email, password, display_name: name, ide_id: newIde.id })
+    const { data: fnData, error: fnError } = await sb.functions.invoke('create-ide-user', {
+      body: { email, password, display_name: name, ide_id: newIde.id }
     });
-    const result = await res.json();
-    if (!res.ok) throw new Error(result.error || 'Erreur création compte');
+    if (fnError) throw new Error(fnError.message || JSON.stringify(fnError));
 
     // 3. Ajouter l'IDE localement et sauvegarder
     app.ides.push(newIde);
@@ -2764,8 +2757,6 @@ function refreshAll() {
 // =============================
 const SUPABASE_URL = 'https://svcelyavtkgxwhtkyqll.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN2Y2VseWF2dGtneHdodGt5cWxsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxMDI0OTQsImV4cCI6MjA5MTY3ODQ5NH0.1LzhNSMGQYQnlkjhVM6TE67DVbs23IJhJ9hc57XgvN8';
-// URL de l'Edge Function de création de compte IDE
-const CREATE_IDE_USER_FN = SUPABASE_URL + '/functions/v1/create-ide-user';
 let _sb = null;
 function getSB() {
   if (!_sb) {
