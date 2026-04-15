@@ -681,9 +681,66 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 
 /* SAFE AREA (iPhone notch / home bar) */
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
-  #ide-view .ide-bottom-nav {
-    padding-bottom: calc(.75rem + env(safe-area-inset-bottom));
+  .ide-bottom-nav {
+    padding-bottom: calc(.4rem + env(safe-area-inset-bottom)) !important;
   }
+}
+
+/* ===== RESPONSIVE MOBILE ===== */
+@media (max-width: 640px) {
+  /* Header */
+  .app-header {
+    padding: 0 10px;
+    gap: 6px;
+    height: auto;
+    min-height: 52px;
+    flex-wrap: wrap;
+    row-gap: 0;
+  }
+  .app-logo span { display: none; }
+  .header-tabs { margin-left: 0; order: 3; width: 100%; border-radius: 0; border-left: none; border-right: none; border-bottom: 1px solid var(--border); background: var(--surface2); padding: 4px 8px; justify-content: space-around; }
+  .header-tab { padding: 4px 10px; font-size: 11.5px; }
+  .header-right { gap: 4px; }
+  .btn { padding: 5px 8px; font-size: 11px; }
+  .btn-primary, .btn-success, .btn-danger { padding: 5px 10px; }
+
+  /* Layout — stack sidebar on top */
+  .app-body { flex-direction: column; height: auto; min-height: calc(100vh - 52px); }
+  .sidebar { width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); overflow-y: visible; flex-shrink: 0; }
+  .sidebar-section { padding: 10px 12px; }
+  #ide-list { display: flex; flex-wrap: wrap; gap: 4px; }
+  .ide-card { margin-bottom: 0; padding: 5px 8px; }
+  .ide-name { font-size: 12px; }
+  .ide-balance { font-size: 10px; }
+  #selected-ide-stats { display: none !important; }
+  #violations-summary { display: none !important; }
+  .main-content { flex: 1; overflow: auto; min-height: 0; }
+
+  /* Planning */
+  .planning-wrapper { padding: 10px 8px; }
+  .planning-controls { gap: 6px; }
+  .year-label { font-size: 15px; }
+  .month-card { border-radius: 8px; }
+
+  /* Settings */
+  .settings-grid { grid-template-columns: 1fr !important; }
+  #tab-settings > div { padding: 10px; }
+  .settings-card { padding: 14px; }
+
+  /* Dashboard */
+  #tab-dashboard > div { padding: 10px; }
+  #tab-dashboard > div > div:last-child { grid-template-columns: 1fr !important; }
+
+  /* Modals */
+  .overlay { padding: 0; align-items: flex-end; }
+  .modal { border-radius: 16px 16px 0 0; max-width: 100% !important; max-height: 90dvh; }
+  .modal-body { padding: 14px 16px; }
+  .modal-header { padding: 14px 16px 12px; }
+  .modal-footer { padding: 10px 16px; }
+
+  /* Code grid in modal */
+  .code-grid { grid-template-columns: repeat(5, 1fr) !important; gap: 4px !important; }
+  .code-btn { padding: 6px 2px; font-size: 10px; }
 }
 
 /* Print */
@@ -726,7 +783,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 </div>
 
 <!-- IDE PERSONAL VIEW -->
-<div id="ide-view" style="display:none;height:100vh;height:100dvh;background:#0f172a;color:#f1f5f9;overflow:hidden;"></div>
+<div id="ide-view" style="display:none;"></div>
 
 <!-- LOADING SCREEN -->
 <div id="loading-screen" style="display:flex;position:fixed;inset:0;z-index:9998;background:#0f172a;align-items:center;justify-content:center;flex-direction:column;gap:1rem;">
@@ -2967,11 +3024,7 @@ function showCadreView() {
 function showIdeView() {
   _hideAll();
   const v = document.getElementById('ide-view');
-  v.style.display = 'flex';
-  v.style.flexDirection = 'column';
-  v.style.position = 'fixed';
-  v.style.inset = '0';
-  v.style.height = '100dvh';
+  v.style.cssText = 'display:block;position:fixed;inset:0;overflow:hidden;z-index:500;';
 }
 
 async function doLogin() {
@@ -3021,7 +3074,7 @@ async function handleLogin(user) {
 function _renderChangePasswordScreen(ideId) {
   const container = document.getElementById('ide-view');
   container.textContent = '';
-  container.style.cssText = 'position:fixed;inset:0;background:#0f172a;display:flex;align-items:center;justify-content:center;padding:1rem;';
+  container.style.cssText = 'width:100%;height:100%;background:#0f172a;display:flex;align-items:center;justify-content:center;padding:1rem;box-sizing:border-box;overflow-y:auto;';
 
   const card = document.createElement('div');
   card.style.cssText = 'background:#1e293b;border:1px solid #334155;border-radius:16px;padding:2rem;width:100%;max-width:360px;';
@@ -3365,7 +3418,7 @@ function _ideRender() {
 
   // ---- SHELL ----
   const shell = document.createElement('div');
-  shell.style.cssText = `display:flex;flex-direction:column;height:100%;max-width:480px;margin:0 auto;background:${T.bg};font-family:Inter,'Helvetica Neue',sans-serif;`;
+  shell.style.cssText = `display:flex;flex-direction:column;width:100%;height:100%;background:${T.bg};font-family:Inter,'Helvetica Neue',sans-serif;-webkit-font-smoothing:antialiased;`;
 
   // ── HEADER ──
   const hdr = document.createElement('div');
@@ -3391,17 +3444,21 @@ function _ideRender() {
   const hdrRight = document.createElement('div');
   hdrRight.style.cssText = 'display:flex;align-items:center;gap:.5rem;';
 
+  const btnBase = `min-width:36px;min-height:36px;border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;`;
+
   // Dark/light toggle
   const toggleBtn = document.createElement('button');
-  toggleBtn.title = dark ? 'Passer en mode jour' : 'Passer en mode nuit';
-  toggleBtn.style.cssText = `background:${dark?'#334155':'rgba(255,255,255,.2)'};border:none;border-radius:20px;padding:.28rem .6rem;cursor:pointer;font-size:1rem;display:flex;align-items:center;gap:.3rem;color:${dark?'#f1f5f9':'#fff'};`;
-  toggleBtn.innerHTML = dark ? '☀️' : '🌙';
+  toggleBtn.title = dark ? 'Mode jour' : 'Mode nuit';
+  toggleBtn.style.cssText = btnBase + `background:${dark?'rgba(255,255,255,.1)':'rgba(255,255,255,.2)'};border:1px solid ${dark?'rgba(255,255,255,.15)':'rgba(255,255,255,.3)'};`;
+  toggleBtn.innerHTML = dark
+    ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${dark?'#f1f5f9':'#fff'}" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`
+    : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`;
   toggleBtn.onclick = _toggleDark;
 
   const logoutBtn = document.createElement('button');
-  logoutBtn.style.cssText = `background:${dark?'transparent':'rgba(255,255,255,.15)'};border:1px solid ${dark?'#475569':'rgba(255,255,255,.3)'};color:${dark?'#94a3b8':'rgba(255,255,255,.85)'};border-radius:6px;padding:.28rem .65rem;font-size:.75rem;cursor:pointer;`;
-  logoutBtn.textContent = '⏻';
   logoutBtn.title = 'Déconnexion';
+  logoutBtn.style.cssText = btnBase + `background:${dark?'rgba(255,255,255,.08)':'rgba(255,255,255,.15)'};border:1px solid ${dark?'rgba(255,255,255,.12)':'rgba(255,255,255,.25)'};`;
+  logoutBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${dark?'#94a3b8':'rgba(255,255,255,.9)'}" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>`;
   logoutBtn.onclick = doLogout;
 
   hdrRight.appendChild(toggleBtn);
@@ -3412,7 +3469,7 @@ function _ideRender() {
 
   // ── CONTENT ──
   const content = document.createElement('div');
-  content.style.cssText = 'flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;';
+  content.style.cssText = 'flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;';
   if (tab === 'planning') _ideRenderPlanning(content, T);
   else if (tab === 'requests') _ideRenderRequests(content, T);
   else if (tab === 'settings') _ideRenderSettings(content, T);
@@ -3422,20 +3479,26 @@ function _ideRender() {
   const nav = document.createElement('div');
   nav.className = 'ide-bottom-nav';
   nav.style.cssText = `background:${T.surface};border-top:1px solid ${T.border};display:flex;flex-shrink:0;`;
+  // SVG icons — plus fiables que les emojis sur tous les OS
+  const NAV_ICONS = {
+    planning: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+    requests: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
+    settings: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+  };
   const NAV_ITEMS = [
-    ['planning', '📅', 'Planning'],
-    ['requests', '💬', 'Requêtes'],
-    ['settings', '⚙️', 'Paramètres'],
+    ['planning', 'Planning'],
+    ['requests', 'Requêtes'],
+    ['settings', 'Réglages'],
   ];
-  NAV_ITEMS.forEach(([t, icon, label]) => {
+  NAV_ITEMS.forEach(([t, label]) => {
     const active = tab === t;
     const btn = document.createElement('button');
-    btn.style.cssText = `flex:1;padding:.5rem .25rem .4rem;background:transparent;border:none;border-top:2px solid ${active ? T.accent : 'transparent'};cursor:pointer;color:${active ? T.accent : T.textMuted};font-size:.7rem;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:2px;`;
+    btn.style.cssText = `flex:1;padding:.55rem .25rem .45rem;background:transparent;border:none;border-top:2px solid ${active ? T.accent : 'transparent'};cursor:pointer;color:${active ? T.accent : T.textMuted};font-size:.65rem;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:3px;-webkit-tap-highlight-color:transparent;`;
     const iconEl = document.createElement('span');
-    iconEl.style.cssText = 'font-size:1.1rem;line-height:1;';
-    iconEl.textContent = icon;
+    iconEl.style.cssText = `display:flex;align-items:center;justify-content:center;width:20px;height:20px;`;
+    iconEl.innerHTML = NAV_ICONS[t];
     const labelEl = document.createElement('span');
-    labelEl.style.cssText = `font-weight:${active?'700':'400'};`;
+    labelEl.style.cssText = `font-weight:${active?'600':'400'};letter-spacing:.01em;`;
     labelEl.textContent = label;
     btn.appendChild(iconEl);
     btn.appendChild(labelEl);
@@ -3469,7 +3532,7 @@ function _ideRenderPlanning(container, T) {
   nav.style.cssText = `display:flex;align-items:center;justify-content:space-between;padding:.6rem 1rem;background:${T.surface};border-bottom:1px solid ${T.border};position:sticky;top:0;z-index:2;`;
   const mkNavBtn = (txt, fn) => {
     const b = document.createElement('button');
-    b.style.cssText = `background:${T.btnBg};border:none;color:${T.btnText};border-radius:8px;width:32px;height:32px;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;`;
+    b.style.cssText = `background:${T.btnBg};border:none;color:${T.btnText};border-radius:10px;min-width:40px;min-height:40px;font-size:1.2rem;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;`;
     b.textContent = txt;
     b.onclick = fn;
     return b;
@@ -3493,16 +3556,16 @@ function _ideRenderPlanning(container, T) {
     else if (code === 'CA' || code === 'CA-1') caDays++;
   }
   const statsBar = document.createElement('div');
-  statsBar.style.cssText = `display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:.75rem 1rem;background:${T.bg};`;
+  statsBar.style.cssText = `display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:.6rem .75rem;background:${T.bg};`;
   [
-    ['💼', workDays, 'Travail', T.accent],
-    ['🕐', totalH+'h', 'Heures', T.accent],
-    ['🛌', restDays, 'Repos', T.textSub],
-    ['🌴', caDays, 'CA', '#22c55e'],
-  ].forEach(([icon, val, lbl, color]) => {
+    [workDays, 'Travail', T.accent],
+    [totalH+'h', 'Heures', T.accent],
+    [restDays, 'Repos', T.textSub],
+    [caDays, 'CA', '#22c55e'],
+  ].forEach(([val, lbl, color]) => {
     const chip = document.createElement('div');
-    chip.style.cssText = `background:${T.surface};border:1px solid ${T.border};border-radius:10px;padding:.45rem .25rem;text-align:center;`;
-    chip.innerHTML = `<div style="font-size:.75rem;">${icon}</div><div style="font-size:1rem;font-weight:700;color:${color};line-height:1.2;">${val}</div><div style="font-size:.6rem;color:${T.textMuted};">${lbl}</div>`;
+    chip.style.cssText = `background:${T.surface};border:1px solid ${T.border};border-radius:10px;padding:.4rem .2rem;text-align:center;min-width:0;`;
+    chip.innerHTML = `<div style="font-size:.95rem;font-weight:700;color:${color};line-height:1.3;">${val}</div><div style="font-size:.6rem;color:${T.textMuted};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${lbl}</div>`;
     statsBar.appendChild(chip);
   });
   container.appendChild(statsBar);
@@ -3523,7 +3586,7 @@ function _ideRenderPlanning(container, T) {
 
     const row = document.createElement('div');
     const rowBg = isToday ? (T.bg === '#0f172a' ? '#1a2d4a' : '#E8F1FB') : T.surface;
-    row.style.cssText = `display:flex;align-items:center;padding:.55rem .75rem;border-radius:10px;margin-bottom:3px;cursor:pointer;background:${rowBg};border:1px solid ${isToday ? T.accent : (isWork ? T.accent+'33' : T.border)};transition:background .1s;`;
+    row.style.cssText = `display:flex;align-items:center;padding:.6rem .75rem;min-height:52px;border-radius:10px;margin-bottom:3px;cursor:pointer;background:${rowBg};border:1px solid ${isToday ? T.accent : (isWork ? T.accent+'33' : T.border)};transition:background .1s;-webkit-tap-highlight-color:transparent;`;
     row.addEventListener('mouseenter', () => { row.style.background = T.surface2 === T.bg ? T.surface : T.surface2; });
     row.addEventListener('mouseleave', () => { row.style.background = rowBg; });
 
@@ -3712,7 +3775,21 @@ function openIdeRequestModal(ds, code, label) {
   document.getElementById('ide-req-date').textContent = ds;
   document.getElementById('ide-req-code').textContent = code ? (code + ' — ' + label) : 'Libre';
   document.getElementById('ide-req-message').value = '';
-  openModal('ide-request-modal');
+  const m = document.getElementById('ide-request-modal');
+  m.style.display = 'flex';
+  // slide-up animation
+  const sheet = document.getElementById('ide-req-sheet');
+  sheet.style.transform = 'translateY(100%)';
+  requestAnimationFrame(() => {
+    sheet.style.transition = 'transform .3s cubic-bezier(.32,0,.67,0)';
+    sheet.style.transform = 'translateY(0)';
+  });
+}
+function closeIdeRequestModal() {
+  const sheet = document.getElementById('ide-req-sheet');
+  sheet.style.transition = 'transform .25s cubic-bezier(.33,1,.68,1)';
+  sheet.style.transform = 'translateY(100%)';
+  setTimeout(() => { document.getElementById('ide-request-modal').style.display = 'none'; }, 260);
 }
 
 async function submitIdeRequest() {
@@ -3732,7 +3809,7 @@ async function submitIdeRequest() {
     message: msg
   });
   if (error) { alert('Erreur : ' + error.message); return; }
-  closeModal('ide-request-modal');
+  closeIdeRequestModal();
   _ideViewState.tab = 'requests';
   _ideRender();
 }
@@ -3744,26 +3821,23 @@ initApp();
 </div><!-- /app-root -->
 
 <!-- IDE REQUEST MODAL — hors app-root pour rester visible en vue IDE -->
-<div class="overlay" id="ide-request-modal" style="display:none;">
-  <div class="modal" style="max-width:420px;">
-    <div class="modal-header">
-      <div class="modal-title">Demande au cadre</div>
-      <button class="modal-close" onclick="closeModal('ide-request-modal')">&#215;</button>
+<div id="ide-request-modal" style="display:none;position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.5);align-items:flex-end;justify-content:center;">
+  <div id="ide-req-sheet" style="background:#1e293b;border-radius:20px 20px 0 0;width:100%;max-width:520px;padding:1.25rem 1.25rem calc(1.25rem + env(safe-area-inset-bottom));box-shadow:0 -4px 24px rgba(0,0,0,.35);">
+    <!-- Handle -->
+    <div style="width:36px;height:4px;background:#334155;border-radius:2px;margin:0 auto .9rem;"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+      <div style="font-size:1rem;font-weight:700;color:#f1f5f9;">Demande au cadre</div>
+      <button onclick="closeIdeRequestModal()" style="background:none;border:none;color:#94a3b8;font-size:1.3rem;cursor:pointer;padding:.25rem;line-height:1;">×</button>
     </div>
-    <div class="modal-body">
-      <div style="background:#0f172a;border-radius:8px;padding:.75rem;margin-bottom:1rem;">
-        <div style="font-size:.75rem;color:#64748b;margin-bottom:.2rem;">Jour sélectionné</div>
-        <div style="font-size:1rem;font-weight:700;color:#f1f5f9;" id="ide-req-date"></div>
-        <div style="font-size:.82rem;color:#94a3b8;margin-top:.15rem;" id="ide-req-code"></div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Votre message au cadre</label>
-        <textarea class="form-input" id="ide-req-message" rows="4" placeholder="Ex: Je souhaite poser un CA ce jour, ou échanger avec une collègue..." style="font-size:16px;"></textarea>
-      </div>
+    <div style="background:#0f172a;border-radius:10px;padding:.75rem;margin-bottom:.9rem;">
+      <div style="font-size:.7rem;color:#64748b;margin-bottom:.2rem;text-transform:uppercase;letter-spacing:.05em;">Jour sélectionné</div>
+      <div style="font-size:1rem;font-weight:700;color:#f1f5f9;" id="ide-req-date"></div>
+      <div style="font-size:.82rem;color:#94a3b8;margin-top:.15rem;" id="ide-req-code"></div>
     </div>
-    <div class="modal-footer">
-      <button class="btn" onclick="closeModal('ide-request-modal')">Annuler</button>
-      <button class="btn btn-primary" onclick="submitIdeRequest()">Envoyer</button>
+    <textarea id="ide-req-message" rows="3" placeholder="Ex: Je souhaite poser un CA ce jour..." style="width:100%;background:#0f172a;border:1px solid #334155;border-radius:10px;padding:.75rem;color:#f1f5f9;font-size:16px;font-family:inherit;resize:none;outline:none;box-sizing:border-box;"></textarea>
+    <div style="display:flex;gap:.75rem;margin-top:.75rem;">
+      <button onclick="closeIdeRequestModal()" style="flex:1;padding:.75rem;background:#334155;border:none;border-radius:10px;color:#94a3b8;font-size:.9rem;cursor:pointer;font-family:inherit;">Annuler</button>
+      <button onclick="submitIdeRequest()" style="flex:2;padding:.75rem;background:#0057A8;border:none;border-radius:10px;color:#fff;font-size:.9rem;font-weight:600;cursor:pointer;font-family:inherit;">Envoyer la demande</button>
     </div>
   </div>
 </div>
