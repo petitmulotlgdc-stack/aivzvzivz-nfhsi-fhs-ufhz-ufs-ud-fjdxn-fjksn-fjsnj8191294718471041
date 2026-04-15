@@ -1998,20 +1998,48 @@ function renderSettings() {
 
     // IDE list
   const el = document.getElementById('settings-ide-list');
-  el.innerHTML = app.ides.map((ide,i) => {
+  el.textContent = '';
+  app.ides.forEach((ide, i) => {
     const roul = app.roulements[ide.roulement];
     const roulLabel = roul ? roul.name + ' +' + (ide.roulementOffset||0) : '—';
-    return `
-    <div class="ide-list-item">
-      <div class="ide-avatar" style="background:${ide.color.bg};color:${ide.color.text};width:32px;height:32px;font-size:11px;">${ide.short}</div>
-      <div style="flex:1;">
-        <div style="font-size:13px;font-weight:500;">${ide.name}</div>
-        <div style="font-size:11px;color:var(--text3);">${ide.pct}% · ${targetHours(ide)}h/an · ${roulLabel}</div>
-      </div>
-      <button class="btn" style="padding:4px 8px;font-size:11px;margin-right:4px;" onclick="editIde(${i})">&#9998;</button>
-      <button class="btn" style="padding:4px 8px;font-size:11px;" onclick="removeIde(${i})">&#10005;</button>
-    </div>`;
-  }).join('');
+
+    const item = document.createElement('div');
+    item.className = 'ide-list-item';
+
+    const avatar = document.createElement('div');
+    avatar.className = 'ide-avatar';
+    avatar.style.cssText = `background:${ide.color.bg};color:${ide.color.text};width:32px;height:32px;font-size:11px;`;
+    avatar.textContent = ide.short;
+
+    const info = document.createElement('div');
+    info.style.flex = '1';
+    const infoName = document.createElement('div');
+    infoName.style.cssText = 'font-size:13px;font-weight:500;';
+    infoName.textContent = ide.name;
+    const infoSub = document.createElement('div');
+    infoSub.style.cssText = 'font-size:11px;color:var(--text3);';
+    infoSub.textContent = `${ide.pct}% · ${targetHours(ide)}h/an · ${roulLabel}`;
+    info.appendChild(infoName);
+    info.appendChild(infoSub);
+
+    const editBtn = document.createElement('button');
+    editBtn.className = 'btn';
+    editBtn.style.cssText = 'padding:4px 8px;font-size:11px;margin-right:4px;';
+    editBtn.textContent = '✎';
+    editBtn.addEventListener('click', () => editIde(i));
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'btn';
+    delBtn.style.cssText = 'padding:4px 8px;font-size:11px;';
+    delBtn.textContent = '✕';
+    delBtn.addEventListener('click', () => removeIde(i));
+
+    item.appendChild(avatar);
+    item.appendChild(info);
+    item.appendChild(editBtn);
+    item.appendChild(delBtn);
+    el.appendChild(item);
+  });
 
   // Codes list
   const cel = document.getElementById('codes-list');
