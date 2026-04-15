@@ -2280,6 +2280,7 @@ async function confirmAddIde() {
     await saveIdesConfig();
     closeModal('ide-modal');
     refreshAll();
+    renderSettings();
     setTimeout(() => alert(`✅ Compte créé pour ${name} !\nEmail : ${email}\nL'IDE peut se connecter immédiatement avec ce mot de passe.`), 100);
 
   } catch (err) {
@@ -2297,6 +2298,7 @@ async function removeIde(idx) {
   app.ides.splice(idx, 1);
   await saveIdesConfig();
   refreshAll();
+  renderSettings();
 }
 
 // =============================
@@ -2436,6 +2438,7 @@ async function updateIde() {
   await saveIdesConfig();
   closeModal('ide-modal');
   refreshAll();
+  renderSettings();
 }
 
 
@@ -2940,11 +2943,17 @@ async function loadAppConfig() {
   const sb = getSB();
   const { data } = await sb.from('app_config').select('key, value');
   if (!data) return;
+  let idesFound = false;
   data.forEach(row => {
-    if (row.key === 'ides' && Array.isArray(row.value) && row.value.length > 0) {
+    // On écrase les IDEs codées en dur dès que la clé existe dans Supabase,
+    // même si le tableau est vide (suppression de toutes les IDEs voulue)
+    if (row.key === 'ides' && Array.isArray(row.value)) {
       app.ides = row.value;
+      idesFound = true;
     }
   });
+  // Première utilisation : sauvegarder les IDEs par défaut pour que la clé existe
+  if (!idesFound) await saveIdesConfig();
 }
 
 // =============================
