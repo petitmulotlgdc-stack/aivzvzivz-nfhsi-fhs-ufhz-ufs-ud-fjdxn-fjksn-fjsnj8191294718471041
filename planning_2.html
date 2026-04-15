@@ -879,10 +879,23 @@ body {
         <label class="form-label">Couleur avatar</label>
         <div style="display:flex;gap:8px;flex-wrap:wrap;" id="avatar-color-picker"></div>
       </div>
+      <!-- Champs création compte — masqués en mode édition -->
+      <div id="ide-auth-fields" style="border-top:1px solid var(--border);margin-top:12px;padding-top:12px;">
+        <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">Compte de connexion</div>
+        <div class="form-group">
+          <label class="form-label">Adresse email</label>
+          <input type="email" class="form-input" id="ide-email-input" placeholder="marie.dupont@hopital.fr" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Mot de passe temporaire</label>
+          <input type="password" class="form-input" id="ide-password-input" placeholder="Min. 8 caractères" autocomplete="new-password" minlength="8">
+          <div style="font-size:11px;color:var(--text3);margin-top:3px;">L'IDE pourra le modifier après sa première connexion.</div>
+        </div>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('ide-modal')">Annuler</button>
-      <button class="btn btn-primary" onclick="confirmAddIde()">Ajouter</button>
+      <button class="btn btn-primary" id="ide-modal-confirm-btn" onclick="confirmAddIde()">Ajouter</button>
     </div>
   </div>
 </div>
@@ -2084,6 +2097,12 @@ function showAddIdeModal() {
   document.getElementById('ide-name-input').value = '';
   document.getElementById('ide-short-input').value = '';
   document.getElementById('ide-pct-input').value = '100';
+  document.getElementById('ide-email-input').value = '';
+  document.getElementById('ide-password-input').value = '';
+  document.getElementById('ide-auth-fields').style.display = '';
+  const btn = document.getElementById('ide-modal-confirm-btn');
+  btn.textContent = 'Ajouter';
+  btn.onclick = confirmAddIde;
   populateRoulementSelect(Object.keys(app.roulements)[0], 0);
   renderAvatarColorPicker(0);
   openModal('ide-modal');
@@ -2102,22 +2121,76 @@ function selectAvatarColor(i) {
   renderAvatarColorPicker(i);
 }
 
-function confirmAddIde() {
+async function confirmAddIde() {
   const name = document.getElementById('ide-name-input').value.trim();
   const short = document.getElementById('ide-short-input').value.trim().toUpperCase();
   const pct = parseInt(document.getElementById('ide-pct-input').value);
   const roulement = document.getElementById('ide-roulement-input').value;
   const roulementOffset = parseInt(document.getElementById('ide-offset-input').value) || 0;
-  if(!name || !short) return alert('Nom et initiales requis.');
-  const newIde = {
-    id: Date.now(),
-    name, short, pct,
-    color: AVATAR_COLORS[app._selectedAvatarColor || 0],
-    roulement, roulementOffset
-  };
-  app.ides.push(newIde);
-  closeModal('ide-modal');
-  refreshAll();
+  const email = document.getElementById('ide-email-input').value.trim();
+  const password = document.getElementById('ide-password-input').value;
+
+  if (!name || !short) return alert('Nom et initiales requis.');
+  if (!email) return alert('Adresse email requise pour créer le compte.');
+  if (password.length < 8) return alert('Le mot de passe doit contenir au moins 8 caractères.');
+  if (SUPABASE_SERVICE_KEY === 'VOTRE_SERVICE_ROLE_KEY') {
+    return alert('⚠️ Service role key non configurée.\nRenseigne SUPABASE_SERVICE_KEY dans le fichier HTML (Supabase → Settings → API → service_role).');
+  }
+
+  const btn = document.getElementById('ide-modal-confirm-btn');
+  btn.disabled = true;
+  btn.textContent = 'Création…';
+
+  try {
+    // 1. Créer l'entrée locale IDE
+    const newIde = {
+      id: Date.now(),
+      name, short, pct,
+      color: AVATAR_COLORS[app._selectedAvatarColor || 0],
+      roulement, roulementOffset
+    };
+
+    // 2. Créer le compte via l'API Admin Supabase (ne déconnecte PAS l'admin)
+    //    email_confirm:true = compte actif immédiatement, sans email de confirmation
+    const adminHeaders = {
+      'Content-Type': 'application/json',
+      'apikey': SUPABASE_SERVICE_KEY,
+      'Authorization': 'Bearer ' + SUPABASE_SERVICE_KEY
+    };
+
+    const userRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/users`, {
+      method: 'POST',
+      headers: adminHeaders,
+      body: JSON.stringify({ email, password, email_confirm: true })
+    });
+    const userData = await userRes.json();
+    if (!userRes.ok) throw new Error('Erreur création compte : ' + (userData.message || userData.msg || JSON.stringify(userData)));
+    const userId = userData.id;
+    if (!userId) throw new Error('ID utilisateur introuvable dans la réponse Supabase.');
+
+    // 3. Insérer le profil via l'API REST (service role = bypass RLS)
+    const profileRes = await fetch(`${SUPABASE_URL}/rest/v1/profiles`, {
+      method: 'POST',
+      headers: { ...adminHeaders, 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ id: userId, role: 'ide', ide_id: newIde.id, display_name: name })
+    });
+    if (!profileRes.ok) {
+      const err = await profileRes.json().catch(() => ({}));
+      throw new Error('Compte créé mais erreur profil : ' + (err.message || profileRes.status));
+    }
+
+    // 4. Ajouter l'IDE localement
+    app.ides.push(newIde);
+    closeModal('ide-modal');
+    refreshAll();
+    setTimeout(() => alert(`✅ Compte créé pour ${name} !\nEmail : ${email}\nL'IDE peut se connecter immédiatement avec ce mot de passe.`), 100);
+
+  } catch (err) {
+    alert('❌ ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Ajouter';
+  }
 }
 
 function removeIde(idx) {
@@ -2236,9 +2309,12 @@ function editIde(idx) {
   document.getElementById('ide-pct-input').value = ide.pct;
   populateRoulementSelect(ide.roulement, ide.roulementOffset);
   renderAvatarColorPicker(AVATAR_COLORS.findIndex(c => c.bg === ide.color.bg) || 0);
+  // Masquer les champs de création de compte (inutile en édition)
+  document.getElementById('ide-auth-fields').style.display = 'none';
   // Change confirm button to update
-  document.querySelector('#ide-modal .modal-footer .btn-primary').setAttribute('onclick','updateIde()');
-  document.querySelector('#ide-modal .modal-footer .btn-primary').textContent = 'Mettre à jour';
+  const btn = document.getElementById('ide-modal-confirm-btn');
+  btn.onclick = updateIde;
+  btn.textContent = 'Mettre à jour';
   openModal('ide-modal');
 }
 
@@ -2252,9 +2328,10 @@ function updateIde() {
   ide.roulement = document.getElementById('ide-roulement-input').value;
   ide.roulementOffset = parseInt(document.getElementById('ide-offset-input').value) || 0;
   ide.color = AVATAR_COLORS[app._selectedAvatarColor || 0];
-  // Reset button
-  document.querySelector('#ide-modal .modal-footer .btn-primary').setAttribute('onclick','confirmAddIde()');
-  document.querySelector('#ide-modal .modal-footer .btn-primary').textContent = 'Ajouter';
+  // Reset button to "Ajouter" mode
+  const btn = document.getElementById('ide-modal-confirm-btn');
+  btn.onclick = confirmAddIde;
+  btn.textContent = 'Ajouter';
   closeModal('ide-modal');
   refreshAll();
 }
@@ -2608,6 +2685,8 @@ function refreshAll() {
 // =============================
 const SUPABASE_URL = 'https://svcelyavtkgxwhtkyqll.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN2Y2VseWF2dGtneHdodGt5cWxsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxMDI0OTQsImV4cCI6MjA5MTY3ODQ5NH0.1LzhNSMGQYQnlkjhVM6TE67DVbs23IJhJ9hc57XgvN8';
+// Service role key — Supabase > Settings > API > service_role (ne jamais exposer publiquement)
+const SUPABASE_SERVICE_KEY = 'VOTRE_SERVICE_ROLE_KEY';
 let _sb = null;
 function getSB() {
   if (!_sb) {
