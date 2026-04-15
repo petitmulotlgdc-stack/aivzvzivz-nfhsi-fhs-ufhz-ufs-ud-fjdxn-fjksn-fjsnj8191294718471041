@@ -2864,17 +2864,80 @@ async function handleLogin(user) {
     console.log('[IDE] ide_id:', profile.ide_id, '| must_change_password:', profile.must_change_password, '| ides trouvées:', app.ides.map(i=>i.id));
     if (profile.must_change_password) {
       // Premier login : forcer le changement de mot de passe avant tout accès
-      _hideAll();
-      document.body.style.background = '#0f172a';
-      const modal = document.getElementById('change-password-modal');
-      console.log('[modal]', modal, modal ? modal.style.display : 'NOT FOUND');
-      modal.style.display = 'flex';
-      console.log('[modal] après display flex:', modal.style.display);
+      showIdeView();
+      _renderChangePasswordScreen(profile.ide_id);
     } else {
       showIdeView();
       await loadIdePlanningAndShow(profile.ide_id);
     }
   }
+}
+
+function _renderChangePasswordScreen(ideId) {
+  const container = document.getElementById('ide-view');
+  container.textContent = '';
+  container.style.cssText = 'display:block;min-height:100vh;background:#0f172a;display:flex;align-items:center;justify-content:center;padding:1rem;';
+
+  const card = document.createElement('div');
+  card.style.cssText = 'background:#1e293b;border:1px solid #334155;border-radius:16px;padding:2rem;width:100%;max-width:360px;';
+
+  const title = document.createElement('div');
+  title.style.cssText = 'color:#f1f5f9;font-size:1.1rem;font-weight:700;margin-bottom:.5rem;';
+  title.textContent = '🔐 Choisir votre mot de passe';
+
+  const subtitle = document.createElement('p');
+  subtitle.style.cssText = 'color:#94a3b8;font-size:.85rem;margin:0 0 1.25rem;';
+  subtitle.textContent = 'Première connexion — définissez votre mot de passe personnel.';
+
+  const mkInput = (id, placeholder) => {
+    const wrap = document.createElement('div');
+    wrap.style.marginBottom = '.75rem';
+    const inp = document.createElement('input');
+    inp.type = 'password';
+    inp.id = id;
+    inp.placeholder = placeholder;
+    inp.autocomplete = 'new-password';
+    inp.style.cssText = 'width:100%;box-sizing:border-box;background:#0f172a;border:1px solid #334155;border-radius:8px;padding:.6rem .75rem;color:#f1f5f9;font-size:.9rem;outline:none;';
+    wrap.appendChild(inp);
+    return wrap;
+  };
+
+  const errEl = document.createElement('div');
+  errEl.style.cssText = 'color:#f87171;font-size:.8rem;min-height:1.2rem;margin-bottom:.5rem;';
+
+  const btn = document.createElement('button');
+  btn.style.cssText = 'width:100%;background:#0ea5e9;color:#fff;border:none;border-radius:8px;padding:.7rem;font-size:.9rem;font-weight:600;cursor:pointer;';
+  btn.textContent = 'Valider';
+  btn.onclick = async () => {
+    const pwd1 = document.getElementById('cpwd-1').value;
+    const pwd2 = document.getElementById('cpwd-2').value;
+    errEl.textContent = '';
+    if (pwd1.length < 8) { errEl.textContent = 'Minimum 8 caractères.'; return; }
+    if (pwd1 !== pwd2) { errEl.textContent = 'Les mots de passe ne correspondent pas.'; return; }
+    btn.disabled = true;
+    btn.textContent = 'Enregistrement…';
+    try {
+      const sb = getSB();
+      const { error } = await sb.auth.updateUser({ password: pwd1 });
+      if (error) throw new Error(error.message);
+      const { data: { user } } = await sb.auth.getUser();
+      await sb.from('profiles').update({ must_change_password: false }).eq('id', user.id);
+      showIdeView();
+      await loadIdePlanningAndShow(ideId);
+    } catch (e) {
+      errEl.textContent = '❌ ' + e.message;
+      btn.disabled = false;
+      btn.textContent = 'Valider';
+    }
+  };
+
+  card.appendChild(title);
+  card.appendChild(subtitle);
+  card.appendChild(mkInput('cpwd-1', 'Nouveau mot de passe (min. 8 car.)'));
+  card.appendChild(mkInput('cpwd-2', 'Confirmer le mot de passe'));
+  card.appendChild(errEl);
+  card.appendChild(btn);
+  container.appendChild(card);
 }
 
 async function submitNewPassword() {
