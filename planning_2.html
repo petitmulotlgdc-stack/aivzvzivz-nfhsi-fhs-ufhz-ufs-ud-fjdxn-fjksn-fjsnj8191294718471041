@@ -2840,7 +2840,9 @@ async function doLogin() {
 
 async function handleLogin(user) {
   const sb = getSB();
-  const { data: profile } = await sb.from('profiles').select('*').eq('id', user.id).single();
+  console.log('[handleLogin] user:', user.email, user.id);
+  const { data: profile, error: profileErr } = await sb.from('profiles').select('*').eq('id', user.id).single();
+  console.log('[handleLogin] profile:', profile, 'error:', profileErr);
   if (!profile) {
     document.getElementById('login-error').textContent = 'Profil introuvable. Contactez le cadre.';
     showLoginScreen();
