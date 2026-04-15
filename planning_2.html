@@ -2865,7 +2865,11 @@ async function handleLogin(user) {
     if (profile.must_change_password) {
       // Premier login : forcer le changement de mot de passe avant tout accès
       _hideAll();
-      document.getElementById('change-password-modal').style.display = 'flex';
+      document.body.style.background = '#0f172a';
+      const modal = document.getElementById('change-password-modal');
+      console.log('[modal]', modal, modal ? modal.style.display : 'NOT FOUND');
+      modal.style.display = 'flex';
+      console.log('[modal] après display flex:', modal.style.display);
     } else {
       showIdeView();
       await loadIdePlanningAndShow(profile.ide_id);
