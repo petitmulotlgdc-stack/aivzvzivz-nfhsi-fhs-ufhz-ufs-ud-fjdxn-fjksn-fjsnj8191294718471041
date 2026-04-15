@@ -1043,17 +1043,34 @@ const app = {
   _regenTarget: null,
 
   roulements: {
-    'R-A': { name: 'Roulement A', cycle: ['JM2','JM2','JS2','JS2'] },
-    'R-B': { name: 'Roulement B', cycle: ['JS2','JS2','J05','J05'] },
-    'R-C': { name: 'Roulement C', cycle: ['J05','J05','JM2','JM2'] },
+    // Roulement 6 semaines médecine 12h
+    // Cycle : position 0-5, clés = getDay() JS (0=Dim,1=Lun,2=Mar,3=Mer,4=Jeu,5=Ven,6=Sam)
+    // Valeurs : 'W'=travail, 'O'=flexible (travail si besoin), 'RH'=repos hebdo, '-'=repos
+    'R-6S': {
+      name: 'Roulement 6 semaines',
+      type: 'weekly6',
+      workCode: 'JM2',
+      weeks: [
+        { 1:'W',  2:'-',  3:'-',  4:'-',  5:'W',  6:'W',  0:'W'  }, // pos 0 : TypeI  (Lun+Ven+Sam+Dim)
+        { 1:'-',  2:'-',  3:'-',  4:'W',  5:'O',  6:'RH', 0:'RH' }, // pos 1 : TypeII (Jeu+Ven flex)
+        { 1:'-',  2:'W',  3:'W',  4:'-',  5:'-',  6:'RH', 0:'RH' }, // pos 2 : TypeIII (Mar+Mer)
+        { 1:'W',  2:'-',  3:'-',  4:'-',  5:'W',  6:'W',  0:'W'  }, // pos 3 : TypeI
+        { 1:'-',  2:'-',  3:'-',  4:'W',  5:'O',  6:'RH', 0:'RH' }, // pos 4 : TypeII
+        { 1:'-',  2:'W',  3:'W',  4:'O',  5:'-',  6:'RH', 0:'RH' }, // pos 5 : TypeIII+Jeu flex
+      ]
+    },
+    // Anciens roulements conservés pour compatibilité
+    'R-A': { name: 'Roulement A', type: 'cycle', cycle: ['JM2','JM2','JS2','JS2'] },
+    'R-B': { name: 'Roulement B', type: 'cycle', cycle: ['JS2','JS2','J05','J05'] },
+    'R-C': { name: 'Roulement C', type: 'cycle', cycle: ['J05','J05','JM2','JM2'] },
   },
 
   ides: [
-    { id: 1, name: 'MAILLOT Lau.',       short: 'ML', pct: 100, color: AVATAR_COLORS[0], roulement: 'R-A', roulementOffset: 0 },
-    { id: 2, name: 'NTOYA Oté.',          short: 'NO', pct: 100, color: AVATAR_COLORS[1], roulement: 'R-B', roulementOffset: 0 },
-    { id: 3, name: 'PEREIRA San.',        short: 'PS', pct: 100, color: AVATAR_COLORS[2], roulement: 'R-C', roulementOffset: 0 },
-    { id: 4, name: 'LUKEMBELADIO Van.',   short: 'LV', pct: 100, color: AVATAR_COLORS[3], roulement: 'R-A', roulementOffset: 2 },
-    { id: 5, name: 'ROLLAND Cat.',        short: 'RC', pct: 80,  color: AVATAR_COLORS[4], roulement: 'R-B', roulementOffset: 2 },
+    { id: 1, name: 'MAILLOT Lau.',       short: 'ML', pct: 100, color: AVATAR_COLORS[0], roulement: 'R-6S', roulementOffset: 0 },
+    { id: 2, name: 'NTOYA Oté.',          short: 'NO', pct: 100, color: AVATAR_COLORS[1], roulement: 'R-6S', roulementOffset: 0 },
+    { id: 3, name: 'PEREIRA San.',        short: 'PS', pct: 100, color: AVATAR_COLORS[2], roulement: 'R-6S', roulementOffset: 2 },
+    { id: 4, name: 'LUKEMBELADIO Van.',   short: 'LV', pct: 100, color: AVATAR_COLORS[3], roulement: 'R-6S', roulementOffset: 2 },
+    { id: 5, name: 'ROLLAND Cat.',        short: 'RC', pct: 80,  color: AVATAR_COLORS[4], roulement: 'R-6S', roulementOffset: 4 },
   ],
 
   codes: {
@@ -1085,6 +1102,18 @@ const app = {
 // =============================
 function dateStr(y, m, d) { return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; }
 function parseDate(s) { const p=s.split('-'); return new Date(+p[0],+p[1]-1,+p[2]); }
+
+// Retourne la position (0-5) dans le cycle de 6 semaines pour une date donnée
+function getRoulementWeekPos(ds, year, offset) {
+  const d = parseDate(ds);
+  const jan1 = new Date(year, 0, 1);
+  const dow = jan1.getDay(); // 0=Dim, 1=Lun...
+  const daysBack = dow === 0 ? 6 : dow - 1; // reculer au lundi
+  const refMonday = new Date(year, 0, 1 - daysBack);
+  const diffDays = Math.round((d - refMonday) / 86400000);
+  const weekIdx = Math.floor(diffDays / 7);
+  return ((weekIdx + offset) % 6 + 6) % 6;
+}
 function daysInMonth(y, m) { return new Date(y, m+1, 0).getDate(); }
 function dayOfWeek(y, m, d) { let dow=new Date(y,m,d).getDay(); return dow===0?6:dow-1; } // 0=Mon..6=Sun
 function isWeekend(y, m, d) { const dow=dayOfWeek(y,m,d); return dow===5||dow===6; }
@@ -1272,13 +1301,17 @@ function runGeneration() {
     setTimeout(() => {
       prog(35, 'Placement des RH et postes semaine par semaine…');
 
-      // ── Assignation greedy des week-ends ─────────────────────────────────
-      // Pour chaque WE, on choisit les N IDEs (N = minIdePerjour) qui ont
-      // travaillé le moins de week-ends jusqu'ici — garantit l'équité et
-      // la couverture sans collision de modulo entre IDEs.
+      // Détecte si tous les IDEs utilisent le roulement 6 semaines
+      const useWeekly6 = app.ides.every(ide => {
+        const r = app.roulements[ide.roulement];
+        return r && r.type === 'weekly6';
+      });
+
+      // ── Assignation greedy des week-ends (roulements legacy uniquement) ──
       const weCount = {};
       app.ides.forEach(ide => { weCount[ide.id] = 0; });
       const weAssignments = {}; // wkIdx → Set<ideId>
+      if (!useWeekly6)
       weeks.forEach((wk, wkIdx) => {
         const satD = wk.find(d => parseDate(d).getDay() === 6);
         const sunD = wk.find(d => parseDate(d).getDay() === 0);
@@ -1290,6 +1323,8 @@ function runGeneration() {
           available = app.ides.filter(ide => {
             const satLock = satD && locked[ide.id] && locked[ide.id][satD];
             const sunLock = sunD && locked[ide.id] && locked[ide.id][sunD];
+            // WE plein requis : les deux jours doivent être libres
+            if (satD && sunD && (satLock || sunLock)) return false;
             if (satLock && sunLock) return false;
             // Vérifier qu'elle n'a pas travaillé les <gap> derniers WE
             for (let g = 1; g <= gap; g++) {
@@ -1308,7 +1343,7 @@ function runGeneration() {
           weCount[available[i].id]++;
         }
         weAssignments[wkIdx] = workers;
-      });
+      }); // fin forEach weeks (legacy)
 
       app.ides.forEach((ide, ideIdx) => {
         const plan = {};
@@ -1323,101 +1358,71 @@ function runGeneration() {
 
         // Roulement propre à cette IDE
         const roul = app.roulements[ide.roulement];
-        const WORK_CYCLE = roul ? roul.cycle : ['JM2','JS2','J05'];
-        let cycleIdx = (ide.roulementOffset || 0) % WORK_CYCLE.length;
 
-        // ── PHASE 1 : RH + marqueur WE (semaine par semaine) ─────────
-        weeks.forEach((wk, wkIdx) => {
-          const worksWE = weAssignments[wkIdx] && weAssignments[wkIdx].has(ide.id);
-          const sat = wk.find(d => parseDate(d).getDay() === 6);
-          const sun = wk.find(d => parseDate(d).getDay() === 0);
-          const wd  = wk.filter(d => { const g = parseDate(d).getDay(); return g >= 1 && g <= 5; });
+        if (roul && roul.type === 'weekly6') {
+          // ── PHASE 1+2 (weekly6) : Placement basé sur le cycle de 6 semaines ──
+          const workCode = roul.workCode || 'JM2';
+          const ideOffset = ide.roulementOffset || 0;
+          allDates.forEach(ds => {
+            if (plan[ds]) return; // code verrouillé, ne pas toucher
+            const d = parseDate(ds);
+            const weekPos = getRoulementWeekPos(ds, app.year, ideOffset);
+            const assignment = roul.weeks[weekPos][d.getDay()];
+            if (assignment === 'W')       plan[ds] = workCode;
+            else if (assignment === 'O')  plan[ds] = '__FLEX__';
+            else if (assignment === 'RH') plan[ds] = 'RH';
+            else                          plan[ds] = '-';
+          });
 
-          if (!worksWE) {
-            // Repos WE : RH sur Sam + Dim
-            if (sat && !plan[sat]) plan[sat] = 'RH';
-            if (sun && !plan[sun]) plan[sun] = 'RH';
-          } else {
-            // WE travaillé : placer 2 RH sur 2 jours de semaine consécutifs
-            // Préférence : Mer+Jeu, Jeu+Ven, Mar+Mer, Lun+Mar
-            const rhPairs = [
-              [wd[2], wd[3]],
-              [wd[3], wd[4]],
-              [wd[1], wd[2]],
-              [wd[0], wd[1]],
-            ];
-            let placed = false;
-            for (const [da, db] of rhPairs) {
-              if (da && db && !plan[da] && !plan[db]) {
-                plan[da] = 'RH'; plan[db] = 'RH';
-                placed = true; break;
+        } else {
+          // ── PHASE 1 (legacy) : RH + marqueur WE ──────────────────────────────
+          const WORK_CYCLE = roul ? roul.cycle : ['JM2','JS2','J05'];
+          let cycleIdx = (ide.roulementOffset || 0) % WORK_CYCLE.length;
+
+          weeks.forEach((wk, wkIdx) => {
+            const worksWE = weAssignments[wkIdx] && weAssignments[wkIdx].has(ide.id);
+            const sat = wk.find(d => parseDate(d).getDay() === 6);
+            const sun = wk.find(d => parseDate(d).getDay() === 0);
+            const wd  = wk.filter(d => { const g = parseDate(d).getDay(); return g >= 1 && g <= 5; });
+            if (!worksWE) {
+              if (sat && !plan[sat]) plan[sat] = 'RH';
+              if (sun && !plan[sun]) plan[sun] = 'RH';
+            } else {
+              const rhPairs = [[wd[2],wd[3]],[wd[3],wd[4]],[wd[1],wd[2]],[wd[0],wd[1]]];
+              let placed = false;
+              for (const [da, db] of rhPairs) {
+                if (da && db && !plan[da] && !plan[db]) { plan[da]='RH'; plan[db]='RH'; placed=true; break; }
               }
+              if (!placed) { let n=0; for (const d of wd) { if(!plan[d]&&n<2){plan[d]='RH';n++;} } }
+              if (sat && !locked[ide.id][sat]) plan[sat] = WE_PLACEHOLDER;
+              if (sun && !locked[ide.id][sun]) plan[sun] = WE_PLACEHOLDER;
             }
-            if (!placed) {
-              // Repli : 2 premiers jours libres de la semaine
-              let n = 0;
-              for (const d of wd) { if (!plan[d] && n < 2) { plan[d] = 'RH'; n++; } }
+          });
+
+          // ── PHASE 2 (legacy) : Placement des postes en paires ────────────────
+          let consec = 0;
+          for (let i = 0; i < allDates.length; i++) {
+            const ds = allDates[i];
+            if (plan[ds] === WE_PLACEHOLDER) {
+              plan[ds] = WORK_CYCLE[cycleIdx % WORK_CYCLE.length];
+              consec++;
+              if (consec === 2) cycleIdx++;
+              continue;
             }
-            // Marquer les jours WE pour affectation de poste en Phase 2
-            if (sat && !plan[sat]) plan[sat] = WE_PLACEHOLDER;
-            if (sun && !plan[sun]) plan[sun] = WE_PLACEHOLDER;
+            if (plan[ds]) { consec = isWorkCode(plan[ds]) ? consec+1 : 0; continue; }
+            if (consec >= 2) { plan[ds] = '-'; consec = 0; continue; }
+            const nextDs = (i+1 < allDates.length) ? allDates[i+1] : null;
+            const nextFree = nextDs && !plan[nextDs];
+            if (consec === 0 && nextFree) {
+              const wc = WORK_CYCLE[cycleIdx % WORK_CYCLE.length];
+              plan[ds] = wc; plan[nextDs] = wc; cycleIdx++; consec = 2; i++;
+            } else if (consec === 1 && nextFree) {
+              plan[ds] = WORK_CYCLE[(cycleIdx-1+WORK_CYCLE.length)%WORK_CYCLE.length]; consec = 2;
+            } else {
+              plan[ds] = '-'; consec = 0;
+            }
           }
-        });
-
-        // ── PHASE 2 : Placement des postes en paires (scan linéaire) ─
-        // Règle fondamentale : jamais plus de 2 jours de travail consécutifs.
-        // Les jours libres isolés reçoivent un repos compensateur ('-').
-        let consec = 0; // compteur de jours travaillés consécutifs en cours
-
-        for (let i = 0; i < allDates.length; i++) {
-          const ds = allDates[i];
-
-          // Jour WE à travailler : attribuer le code de la rotation
-          if (plan[ds] === WE_PLACEHOLDER) {
-            plan[ds] = WORK_CYCLE[cycleIdx % WORK_CYCLE.length];
-            consec++;
-            if (consec === 2) cycleIdx++; // avancer la rotation après une paire complète
-            continue;
-          }
-
-          // Jour déjà affecté (RH, F, CA, etc.)
-          if (plan[ds]) {
-            consec = isWorkCode(plan[ds]) ? consec + 1 : 0;
-            continue;
-          }
-
-          // Jour libre ─────────────────────────────────────────────────
-
-          // Sécurité : forcer un repos si on a déjà 2 jours de travail consécutifs
-          if (consec >= 2) {
-            plan[ds] = '-';
-            consec = 0;
-            continue;
-          }
-
-          const nextDs   = (i + 1 < allDates.length) ? allDates[i + 1] : null;
-          const nextFree = nextDs && !plan[nextDs];
-
-          if (consec === 0 && nextFree) {
-            // Placer une nouvelle paire de travail
-            const wc = WORK_CYCLE[cycleIdx % WORK_CYCLE.length];
-            plan[ds]     = wc;
-            plan[nextDs] = wc;
-            cycleIdx++;
-            consec = 2;
-            i++; // sauter nextDs (déjà affecté)
-
-          } else if (consec === 1 && nextFree) {
-            // Compléter une paire déjà commencée (ex. : 1er jour WE suivi d'un jour libre)
-            plan[ds] = WORK_CYCLE[(cycleIdx - 1 + WORK_CYCLE.length) % WORK_CYCLE.length];
-            consec = 2;
-
-          } else {
-            // Jour libre isolé (le suivant est pris ou inexistant) → repos compensateur
-            plan[ds] = '-';
-            consec = 0;
-          }
-        }
+        } // fin branchement roulement
 
         // ── PHASE 3 : TP pour les IDEs à temps partiel (≈ 3 TP / 4 sem.) ─
         if (ide.pct < 100) {
@@ -1544,6 +1549,25 @@ function runGeneration() {
 
         app.planning[ide.id] = plan;
       }); // fin forEach IDE
+
+      // ── Résolution des jours flexibles (__FLEX__) ────────────────────────
+      // Un jour O devient travail si la couverture est insuffisante, sinon repos.
+      if (useWeekly6) {
+        app.ides.forEach(ide => {
+          const plan = app.planning[ide.id];
+          if (!plan) return;
+          const roul = app.roulements[ide.roulement];
+          const workCode = (roul && roul.workCode) || 'JM2';
+          allDates.forEach(ds => {
+            if (plan[ds] !== '__FLEX__') return;
+            let cnt = 0;
+            app.ides.forEach(other => {
+              if (other.id !== ide.id && isWorkCode((app.planning[other.id] || {})[ds])) cnt++;
+            });
+            plan[ds] = cnt < app.minIdePerjour ? workCode : '-';
+          });
+        });
+      }
 
       setTimeout(() => {
         prog(80, 'Vérification de la couverture minimale…');
@@ -2268,8 +2292,9 @@ function regenIdeMonth(ideId, monthIdx) {
   const holidays = frenchHolidays(app.year);
   const LOCKED_CODES = new Set(['CA','CA-1','CET','HS','HS-1','FR','AM','FCJ','FCH','?','H-','H+P','H+R']);
   const roulDef = app.roulements[ide.roulement];
-  const WORK_CYCLE = roulDef ? roulDef.cycle : ['JM2','JS2','J05'];
+  const WORK_CYCLE = roulDef ? (roulDef.cycle || ['JM2']) : ['JM2','JS2','J05'];
   const WE_PLACEHOLDER = '__WE__';
+  const isWeekly6 = roulDef && roulDef.type === 'weekly6';
 
   const plan = Object.assign({}, app.planning[ideId] || {});
   const locked = {};
@@ -2341,6 +2366,8 @@ function regenIdeMonth(ideId, monthIdx) {
       available = app.ides.filter(ide => {
         const satLock = satD && app.planning[ide.id] && LOCKED_CODES.has(app.planning[ide.id][satD]);
         const sunLock = sunD && app.planning[ide.id] && LOCKED_CODES.has(app.planning[ide.id][sunD]);
+        // WE plein requis : les deux jours doivent être libres
+        if(satD && sunD && (satLock || sunLock)) return false;
         if(satLock && sunLock) return false;
         for(let g = 1; g <= gap; g++) {
           // Semaines déjà traitées ce mois-ci
@@ -2362,47 +2389,60 @@ function regenIdeMonth(ideId, monthIdx) {
     weAssignments[wkIdx] = workers;
   });
 
-  monthWeeks.forEach((wk, wkIdx) => {
-    const worksWE = weAssignments[wkIdx] && weAssignments[wkIdx].has(ideId);
-    const sat = wk.find(d => parseDate(d).getDay() === 6);
-    const sun = wk.find(d => parseDate(d).getDay() === 0);
-    const wd  = wk.filter(d => { const g = parseDate(d).getDay(); return g >= 1 && g <= 5; });
-    if(!worksWE) {
-      if(sat && !plan[sat]) plan[sat] = 'RH';
-      if(sun && !plan[sun]) plan[sun] = 'RH';
-    } else {
-      const rhPairs = [[wd[2],wd[3]], [wd[3],wd[4]], [wd[1],wd[2]], [wd[0],wd[1]]];
-      let placed = false;
-      for(const [da, db] of rhPairs) {
-        if(da && db && !plan[da] && !plan[db]) { plan[da]='RH'; plan[db]='RH'; placed=true; break; }
+  if(isWeekly6) {
+    // ── Phase 1+2 (weekly6) : placement par cycle de 6 semaines ──────────
+    const workCode = roulDef.workCode || 'JM2';
+    const ideOffset = ide.roulementOffset || 0;
+    monthDates.forEach(ds => {
+      if(plan[ds]) return;
+      const d = parseDate(ds);
+      const weekPos = getRoulementWeekPos(ds, app.year, ideOffset);
+      const assignment = roulDef.weeks[weekPos][d.getDay()];
+      if(assignment === 'W')       plan[ds] = workCode;
+      else if(assignment === 'O') {
+        // Flexible : travail si couverture insuffisante
+        let cnt = 0;
+        app.ides.forEach(other => {
+          if(other.id !== ideId && isWorkCode((app.planning[other.id]||{})[ds])) cnt++;
+        });
+        plan[ds] = cnt < app.minIdePerjour ? workCode : '-';
       }
-      if(!placed) { let n=0; for(const d of wd) { if(!plan[d] && n<2) { plan[d]='RH'; n++; } } }
-      if(sat && !plan[sat]) plan[sat] = WE_PLACEHOLDER;
-      if(sun && !plan[sun]) plan[sun] = WE_PLACEHOLDER;
-    }
-  });
-
-  let cycleIdx = (ide.roulementOffset || 0) % WORK_CYCLE.length;
-  let consec = 0;
-  for(let i=0; i<monthDates.length; i++) {
-    const ds = monthDates[i];
-    if(plan[ds] === WE_PLACEHOLDER) {
-      plan[ds] = WORK_CYCLE[cycleIdx % WORK_CYCLE.length];
-      consec++;
-      if(consec === 2) cycleIdx++;
-      continue;
-    }
-    if(plan[ds]) { consec = isWorkCode(plan[ds]) ? consec+1 : 0; continue; }
-    if(consec >= 2) { plan[ds] = '-'; consec = 0; continue; }
-    const nextDs = (i+1 < monthDates.length) ? monthDates[i+1] : null;
-    const nextFree = nextDs && !plan[nextDs];
-    if(consec === 0 && nextFree) {
-      const wc = WORK_CYCLE[cycleIdx % WORK_CYCLE.length];
-      plan[ds] = wc; plan[nextDs] = wc; cycleIdx++; consec = 2; i++;
-    } else if(consec === 1 && nextFree) {
-      plan[ds] = WORK_CYCLE[(cycleIdx-1+WORK_CYCLE.length) % WORK_CYCLE.length]; consec = 2;
-    } else {
-      plan[ds] = '-'; consec = 0;
+      else if(assignment === 'RH') plan[ds] = 'RH';
+      else                         plan[ds] = '-';
+    });
+  } else {
+    // ── Phase 1+2 (legacy) ───────────────────────────────────────────────
+    monthWeeks.forEach((wk, wkIdx) => {
+      const worksWE = weAssignments[wkIdx] && weAssignments[wkIdx].has(ideId);
+      const sat = wk.find(d => parseDate(d).getDay() === 6);
+      const sun = wk.find(d => parseDate(d).getDay() === 0);
+      const wd  = wk.filter(d => { const g = parseDate(d).getDay(); return g >= 1 && g <= 5; });
+      if(!worksWE) {
+        if(sat && !plan[sat]) plan[sat] = 'RH';
+        if(sun && !plan[sun]) plan[sun] = 'RH';
+      } else {
+        const rhPairs = [[wd[2],wd[3]], [wd[3],wd[4]], [wd[1],wd[2]], [wd[0],wd[1]]];
+        let placed = false;
+        for(const [da, db] of rhPairs) {
+          if(da && db && !plan[da] && !plan[db]) { plan[da]='RH'; plan[db]='RH'; placed=true; break; }
+        }
+        if(!placed) { let n=0; for(const d of wd) { if(!plan[d]&&n<2){plan[d]='RH';n++;} } }
+        if(sat && !plan[sat]) plan[sat] = WE_PLACEHOLDER;
+        if(sun && !plan[sun]) plan[sun] = WE_PLACEHOLDER;
+      }
+    });
+    let cycleIdx = (ide.roulementOffset || 0) % WORK_CYCLE.length;
+    let consec = 0;
+    for(let i=0; i<monthDates.length; i++) {
+      const ds = monthDates[i];
+      if(plan[ds] === WE_PLACEHOLDER) { plan[ds]=WORK_CYCLE[cycleIdx%WORK_CYCLE.length]; consec++; if(consec===2)cycleIdx++; continue; }
+      if(plan[ds]) { consec = isWorkCode(plan[ds]) ? consec+1 : 0; continue; }
+      if(consec >= 2) { plan[ds]='-'; consec=0; continue; }
+      const nextDs = (i+1 < monthDates.length) ? monthDates[i+1] : null;
+      const nextFree = nextDs && !plan[nextDs];
+      if(consec===0 && nextFree) { const wc=WORK_CYCLE[cycleIdx%WORK_CYCLE.length]; plan[ds]=wc; plan[nextDs]=wc; cycleIdx++; consec=2; i++; }
+      else if(consec===1 && nextFree) { plan[ds]=WORK_CYCLE[(cycleIdx-1+WORK_CYCLE.length)%WORK_CYCLE.length]; consec=2; }
+      else { plan[ds]='-'; consec=0; }
     }
   }
 
