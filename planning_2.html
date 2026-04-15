@@ -2184,7 +2184,7 @@ async function confirmAddIde() {
   if (!name || !short) return alert('Nom et initiales requis.');
   if (!email) return alert('Adresse email requise pour créer le compte.');
   if (password.length < 8) return alert('Le mot de passe doit contenir au moins 8 caractères.');
-  if (SUPABASE_SERVICE_KEY === 'VOTRE_SERVICE_ROLE_KEY') {
+  if (SUPABASE_SERVICE_KEY === 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN2Y2VseWF2dGtneHdodGt5cWxsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjEwMjQ5NCwiZXhwIjoyMDkxNjc4NDk0fQ.4vKXy9LMmts3r0WPbyZlWGEaJ-gx55Kf5hJhLwzOqxg') {
     return alert('⚠️ Service role key non configurée.\nRenseigne SUPABASE_SERVICE_KEY dans le fichier HTML (Supabase → Settings → API → service_role).');
   }
 
