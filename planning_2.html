@@ -3949,7 +3949,6 @@ initApp();
 
 <!-- Bouton flottant -->
 <button id="ai-fab" onclick="toggleAiChat()" title="Assistant IA" style="
-  display:none;
   position:fixed;bottom:24px;right:24px;z-index:700;
   width:52px;height:52px;border-radius:50%;
   background:linear-gradient(135deg,#0057A8,#0D8A5E);
@@ -4056,7 +4055,6 @@ initApp();
 #ai-panel { display:none; }
 #ai-panel.open { display:flex; }
 #ai-fab { display:none; }
-#ai-fab.visible { display:flex; }
 .ai-tab {
   flex:1;padding:8px 4px;border:none;background:none;cursor:pointer;
   font-size:11.5px;font-family:'Inter',sans-serif;color:#64748B;
@@ -4086,10 +4084,11 @@ let _aiHistory = [];
   // Vérifier immédiatement + observer les changements
   function checkFabVisibility() {
     const root = document.getElementById('app-root');
+    const fab = document.getElementById('ai-fab');
     if (root && root.style.display !== 'none') {
-      document.getElementById('ai-fab').classList.add('visible');
+      fab.style.display = 'flex';
     } else {
-      document.getElementById('ai-fab').classList.remove('visible');
+      fab.style.display = 'none';
       document.getElementById('ai-panel').classList.remove('open');
     }
   }
