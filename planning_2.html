@@ -4358,7 +4358,7 @@ function buildPlanningContext() {
   const violations = checkViolations ? checkViolations() : [];
   const vioLines = violations.map(v => `- [${v.type}] ${v.msg}`).join('\n');
 
-  return `Tu es un assistant expert en planning infirmier. Tu dois répondre en français, de façon claire et concise.
+  return `Tu es un assistant expert en planning infirmier. Tu dois répondre en français, de façon TRÈS concise et synthétique. Maximum 10 lignes. Pas de listes exhaustives, uniquement les points clés et chiffres importants. Utilise des tableaux simples si pertinent.
 
 === CONTEXTE ===
 Date du jour : ${todayStr}
