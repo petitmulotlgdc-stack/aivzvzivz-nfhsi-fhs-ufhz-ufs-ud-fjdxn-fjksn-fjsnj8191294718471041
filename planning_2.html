@@ -4399,11 +4399,12 @@ function buildPlanningContext() {
 
   return `Tu es un assistant expert en planning infirmier. Réponds en français, de façon concise et lisible. Utilise **gras** pour les points importants et des listes courtes avec tirets.
 
-Si l'utilisateur demande une modification du planning (ex: "mets Marie en congé le 5 juin", "échange les postes de X et Y"), inclus à la FIN de ta réponse un bloc JSON entre balises <ACTIONS> et </ACTIONS> avec ce format exact:
+RÈGLE IMPORTANTE : N'inclus un bloc ACTIONS que si l'utilisateur demande EXPLICITEMENT de modifier, changer, mettre, ajouter ou supprimer quelque chose dans le planning. Pour toute question d'analyse, de statistiques ou d'information, réponds uniquement en texte SANS bloc ACTIONS.
+
+Si et SEULEMENT SI l'utilisateur demande une modification explicite, inclus à la toute fin de ta réponse :
 <ACTIONS>[{"ideId":123,"dateStr":"2026-06-05","code":"CA"}]</ACTIONS>
 IDEs disponibles: ${idesIds}
 Codes disponibles: ${codesList}
-Si pas de modification à faire, n'inclus pas de bloc ACTIONS.
 
 === CONTEXTE ===
 Date du jour : ${todayStr}
