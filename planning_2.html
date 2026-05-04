@@ -4080,9 +4080,11 @@ initApp();
 let _geminiKey = localStorage.getItem('mistral_api_key') || '';
 
 async function callMistral(systemPrompt, userMessage, history=[]) {
+  // Mistral : history ne doit contenir que user/assistant en alternance
+  const cleanHistory = history.filter(m => m.role === 'user' || m.role === 'assistant');
   const messages = [
     { role: 'system', content: systemPrompt },
-    ...history,
+    ...cleanHistory,
     { role: 'user', content: userMessage }
   ];
   const resp = await fetch('https://api.mistral.ai/v1/chat/completions', {
@@ -4448,13 +4450,13 @@ async function sendAiMessage() {
   try {
     const systemPrompt = buildPlanningContext();
 
-    // Construire l'historique pour Gemini
-    const historyForGemini = _aiHistory.slice(0,-1).map(m => ({
-      role: m.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: m.content }]
+    // Historique pour Mistral (user/assistant uniquement)
+    const historyForMistral = _aiHistory.slice(0,-1).map(m => ({
+      role: m.role,
+      content: m.content
     }));
     const lastMsg = _aiHistory[_aiHistory.length-1].content;
-    let answer = await callMistral(systemPrompt, lastMsg, historyForGemini);
+    let answer = await callMistral(systemPrompt, lastMsg, historyForMistral);
 
     // Extraire les actions si présentes
     let actions = null;
