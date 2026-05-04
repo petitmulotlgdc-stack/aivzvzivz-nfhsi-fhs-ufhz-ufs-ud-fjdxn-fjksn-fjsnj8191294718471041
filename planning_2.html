@@ -4180,11 +4180,11 @@ async function runAnalyse(type) {
   resultEl.textContent = '⏳ Analyse en cours…';
 
   const prompts = {
-    fatigue: `Analyse la charge de travail et la fatigue de chaque IDE. Identifie qui a le plus de jours consécutifs, qui a le moins de repos, et qui risque l'épuisement. Donne des recommandations concrètes.`,
-    equilibre: `Analyse l'équilibre des week-ends et des gardes entre les IDEs. Qui travaille le plus de week-ends ? Y a-t-il des inégalités ? Propose des ajustements.`,
-    violations: `Explique en détail chaque violation détectée dans le planning. Pour chaque violation, explique pourquoi c'est problématique et comment la corriger concrètement.`,
-    prevision: `En analysant le planning actuel, identifie les périodes où la couverture sera insuffisante dans les prochaines semaines. Quels jours risquent d'être en sous-effectif ?`,
-    echanges: `Propose des échanges de postes entre IDEs pour mieux équilibrer la charge, les week-ends et les congés. Sois précis : qui échange quoi avec qui et quand.`
+    fatigue: `Analyse la fatigue et les risques d'épuisement professionnel pour chaque IDE. Vérifie : séquences de jours consécutifs (alerte >5j), ratio nuits/jours, repos hebdomadaires respectés, balance horaire. Identifie qui est le plus à risque et pourquoi. Donne 2-3 recommandations concrètes prioritaires.`,
+    equilibre: `Fais un tableau comparatif de l'équilibre entre les IDEs : nombre de week-ends travaillés, nombre de nuits, jours fériés travaillés, congés pris. Identifie les inégalités et dis clairement qui est avantagé ou désavantagé. Propose des rééquilibrages précis pour les prochaines semaines.`,
+    violations: `Pour chaque violation détectée, explique : 1) quelle règle réglementaire est enfreinte (référence légale si possible), 2) le risque concret pour l'IDE et le service, 3) comment corriger immédiatement. Priorise par ordre de gravité.`,
+    prevision: `Analyse les 4 prochaines semaines du planning. Identifie : jours en sous-effectif (< minimum requis), périodes de congés qui se chevauchent, absences prévues non couvertes. Propose un plan d'action pour anticiper les problèmes.`,
+    echanges: `Propose des échanges de postes concrets et réalisables entre IDEs pour rééquilibrer la charge. Pour chaque échange proposé : indique les deux IDEs concernées, les dates exactes, les codes à échanger, et le bénéfice attendu. Assure-toi que les échanges respectent la réglementation.`
   };
 
   try {
@@ -4386,34 +4386,61 @@ function buildPlanningContext() {
   const idesIds = JSON.stringify(app.ides.map(i=>({id:i.id,name:i.name,short:i.short})));
   const codesList = Object.keys(app.codes).join(',');
 
-  return `Tu es un assistant expert en planning infirmier. Réponds en français, de façon concise et lisible. Utilise **gras** pour les points importants et des listes courtes avec tirets.
+  return `Tu es un cadre de santé expert en gestion de planning infirmier hospitalier. Tu maîtrises parfaitement la réglementation du travail infirmier en France et tu aides les cadres à optimiser leurs plannings.
 
-RÈGLE IMPORTANTE : N'inclus un bloc ACTIONS que si l'utilisateur demande EXPLICITEMENT de modifier, changer, mettre, ajouter ou supprimer quelque chose dans le planning. Pour toute question d'analyse, de statistiques ou d'information, réponds uniquement en texte SANS bloc ACTIONS.
+=== TES EXPERTISES MÉTIER ===
+**Réglementation du travail infirmier (France) :**
+- Durée max de travail : 12h par poste (jour ou nuit), 48h par semaine
+- Repos minimum entre 2 postes : 11h consécutives
+- Repos hebdomadaire : 2 jours consécutifs minimum toutes les 2 semaines
+- Nuits consécutives max : 5 nuits de suite sans repos
+- Week-ends travaillés : 1 WE sur 2 maximum en règle générale
+- Congés annuels : 25 jours ouvrés minimum + RTT selon accord
+- Jours fériés travaillés → compensation obligatoire (RJF)
 
-Si et SEULEMENT SI l'utilisateur demande une modification explicite, inclus à la toute fin de ta réponse :
+**Codes planning courants :**
+- J/M = poste de jour (matin), N = nuit, AM = après-midi
+- CA = congé annuel, RTT = repos compensateur
+- F = férié, RJF = récupération jour férié
+- AM (absence maladie), FM (formation), TP (temps partiel)
+
+**Bonnes pratiques de planning :**
+- Équilibre des week-ends entre IDEs (écart max ±2 WE/an)
+- Alterner les postes lourds (nuits, WE) équitablement
+- Anticiper les absences estivales (juin-août) = période critique
+- Garder au moins 1 IDE expérimentée par poste si possible
+- Signaler les risques de burn-out (>5 jours consécutifs, peu de WE libres)
+- Pour les temps partiels : calculer proportionnellement
+
+**Analyse de la charge :**
+- Balance horaire = heures réalisées vs heures contractuelles
+- Un écart > 35h est préoccupant
+- Vérifier équité : nb de nuits, WE, jours fériés par IDE
+
+=== RÈGLE ACTIONS ===
+N'inclus un bloc ACTIONS QUE SI l'utilisateur demande EXPLICITEMENT de modifier/changer/mettre/ajouter/supprimer quelque chose. Pour toute analyse ou question : texte SANS ACTIONS.
+
+Si modification explicite demandée, inclus EN FIN de réponse :
 <ACTIONS>[{"ideId":123,"dateStr":"2026-06-05","code":"CA"}]</ACTIONS>
 IDEs disponibles: ${idesIds}
 Codes disponibles: ${codesList}
 
-=== CONTEXTE ===
-Date du jour : ${todayStr}
-Année : ${year}
-Service : ${app.serviceName || 'Non défini'}
-Effectif minimum par jour : ${app.minIdePerjour}
+=== DONNÉES DU SERVICE ===
+Date : ${todayStr} | Année : ${year} | Service : ${app.serviceName || 'Non défini'} | Effectif min/jour : ${app.minIdePerjour}
 
-=== INFIRMIÈRES (IDEs) ===
+=== INFIRMIÈRES ===
 ${idesInfo}
 
-=== CODES ===
+=== CODES CONFIGURÉS ===
 ${Object.entries(app.codes).map(([k,v])=>`${k}=${v.label}(${v.type})`).join(', ')}
 
-=== PLANNING ANNUEL COMPLET ===
+=== PLANNING ===
 ${allPlanLines.join('\n') || '(Aucune donnée)'}
 
-=== VIOLATIONS ===
+=== VIOLATIONS ACTUELLES ===
 ${vioLines || 'Aucune violation'}
 
-Réponds toujours de façon directe et utile. Si une info n'est pas dans le contexte, dis-le clairement.`;
+Réponds en français, de façon concise avec **gras** pour les points clés. Sois proactif : si tu détectes un problème dans le planning, signale-le même si on ne te le demande pas.`;
 }
 
 async function sendAiMessage() {
