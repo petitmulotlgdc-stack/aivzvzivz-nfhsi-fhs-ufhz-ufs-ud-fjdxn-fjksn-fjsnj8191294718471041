@@ -4333,26 +4333,17 @@ function buildPlanningContext() {
     return `- ${ide.name} (${ide.short}) : ${ide.pct}% — ${stats.worked} jours travaillés, ${stats.hours}h, ${stats.ca} CA, ${stats.am} AM, balance ${stats.balance}h`;
   }).join('\n');
 
-  // Planning COMPLET de toute l'année, mois par mois
+  // Planning COMPLET — format ultra-compressé pour tenir dans les tokens
+  // Format: IDE|MM-DD:CODE,MM-DD:CODE,...
   let allPlanLines = [];
-  for (let m = 0; m < 12; m++) {
-    const daysInM = new Date(year, m+1, 0).getDate();
-    const monthName = MONTHS[m];
-    let monthLines = [];
-    for (let d = 1; d <= daysInM; d++) {
-      const ds = `${year}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-      const entries = [];
-      app.ides.forEach(ide => {
-        const code = (app.planning[ide.id]||{})[ds];
-        if (code) entries.push(`${ide.short}:${code}`);
-      });
-      if (entries.length) monthLines.push(`  ${ds}: ${entries.join(', ')}`);
-    }
-    if (monthLines.length) {
-      allPlanLines.push(`--- ${monthName.toUpperCase()} ---`);
-      allPlanLines.push(...monthLines);
-    }
-  }
+  app.ides.forEach(ide => {
+    const plan = app.planning[ide.id] || {};
+    const entries = Object.keys(plan)
+      .filter(ds => ds.startsWith(year+'') && plan[ds])
+      .sort()
+      .map(ds => `${ds.slice(5)}:${plan[ds]}`); // MM-DD:CODE
+    if (entries.length) allPlanLines.push(`${ide.short}|${entries.join(',')}`);
+  });
 
   // Violations
   const violations = checkViolations ? checkViolations() : [];
