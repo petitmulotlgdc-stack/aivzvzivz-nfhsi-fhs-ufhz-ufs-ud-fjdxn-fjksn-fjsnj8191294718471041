@@ -3990,12 +3990,40 @@ initApp();
   <!-- Messages -->
   <div id="ai-messages" style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;"></div>
 
-  <!-- Suggestions rapides -->
-  <div id="ai-suggestions" style="padding:0 12px 8px;display:flex;flex-wrap:wrap;gap:6px;flex-shrink:0;">
+  <!-- Onglets fonctionnalités IA -->
+  <div style="display:flex;border-bottom:1px solid #DDE3ED;flex-shrink:0;background:#fff;">
+    <button class="ai-tab active" onclick="switchAiTab('chat')" id="ai-tab-chat">💬 Chat</button>
+    <button class="ai-tab" onclick="switchAiTab('analyse')" id="ai-tab-analyse">📊 Analyse</button>
+    <button class="ai-tab" onclick="switchAiTab('saisie')" id="ai-tab-saisie">✏️ Saisie</button>
+  </div>
+
+  <!-- Suggestions rapides (chat) -->
+  <div id="ai-suggestions" style="padding:6px 12px 4px;display:flex;flex-wrap:wrap;gap:5px;flex-shrink:0;">
     <button class="ai-suggest" onclick="askSuggestion(this)">Qui travaille aujourd'hui ?</button>
-    <button class="ai-suggest" onclick="askSuggestion(this)">Résumé de cette semaine</button>
     <button class="ai-suggest" onclick="askSuggestion(this)">Violations actuelles ?</button>
-    <button class="ai-suggest" onclick="askSuggestion(this)">Heures par IDE ce mois</button>
+    <button class="ai-suggest" onclick="askSuggestion(this)">Équilibre week-ends</button>
+    <button class="ai-suggest" onclick="askSuggestion(this)">Qui est disponible vendredi ?</button>
+  </div>
+
+  <!-- Panel Analyse -->
+  <div id="ai-panel-analyse" style="display:none;flex:1;overflow-y:auto;padding:12px;flex-direction:column;gap:8px;">
+    <div style="font-size:12px;font-weight:700;color:#0D1B2E;margin-bottom:4px;">Analyses disponibles</div>
+    <button class="ai-action-btn" onclick="runAnalyse('fatigue')">😴 Analyse fatigue & charge</button>
+    <button class="ai-action-btn" onclick="runAnalyse('equilibre')">⚖️ Équilibre week-ends & gardes</button>
+    <button class="ai-action-btn" onclick="runAnalyse('violations')">⚠️ Expliquer les violations</button>
+    <button class="ai-action-btn" onclick="runAnalyse('prevision')">📅 Prévision besoins à venir</button>
+    <button class="ai-action-btn" onclick="runAnalyse('echanges')">🔄 Suggérer des échanges</button>
+    <div id="ai-analyse-result" style="margin-top:8px;font-size:12.5px;line-height:1.6;color:#0D1B2E;white-space:pre-wrap;background:#F7F9FC;border:1px solid #DDE3ED;border-radius:8px;padding:10px;display:none;"></div>
+  </div>
+
+  <!-- Panel Saisie naturelle -->
+  <div id="ai-panel-saisie" style="display:none;flex:1;overflow-y:auto;padding:12px;flex-direction:column;gap:8px;">
+    <div style="font-size:12px;font-weight:700;color:#0D1B2E;">Saisie en langage naturel</div>
+    <div style="font-size:11.5px;color:#64748B;line-height:1.5;">Décrivez une modification en français et l'IA l'appliquera automatiquement.</div>
+    <div style="font-size:11px;color:#94A3B8;font-style:italic;">Ex: "Marie en congés du 10 au 20 juin", "Sophie travaille samedi prochain", "Remplace le J de Lucas le 5 par un N"</div>
+    <textarea id="ai-saisie-input" rows="4" placeholder="Décrivez la modification…" style="border:1px solid #DDE3ED;border-radius:8px;padding:8px;font-size:13px;font-family:inherit;resize:none;outline:none;color:#0D1B2E;line-height:1.4;"></textarea>
+    <button onclick="runSaisieNaturelle()" style="background:#0057A8;color:#fff;border:none;border-radius:8px;padding:9px;font-size:13px;font-weight:600;cursor:pointer;">Appliquer avec l'IA ✦</button>
+    <div id="ai-saisie-result" style="font-size:12px;line-height:1.5;display:none;padding:8px;border-radius:8px;"></div>
   </div>
 
   <!-- Input -->
@@ -4029,6 +4057,19 @@ initApp();
 #ai-panel.open { display:flex; }
 #ai-fab { display:none; }
 #ai-fab.visible { display:flex; }
+.ai-tab {
+  flex:1;padding:8px 4px;border:none;background:none;cursor:pointer;
+  font-size:11.5px;font-family:'Inter',sans-serif;color:#64748B;
+  border-bottom:2px solid transparent;transition:all .15s;
+}
+.ai-tab.active { color:#0057A8;border-bottom-color:#0057A8;font-weight:600; }
+.ai-tab:hover { background:#F7F9FC; }
+.ai-action-btn {
+  width:100%;text-align:left;padding:10px 12px;border:1px solid #DDE3ED;
+  border-radius:8px;background:#fff;cursor:pointer;font-size:12.5px;
+  font-family:'Inter',sans-serif;color:#0D1B2E;transition:background .15s;
+}
+.ai-action-btn:hover { background:#EEF2F7;border-color:#0057A8; }
 </style>
 
 <script>
@@ -4042,8 +4083,8 @@ let _aiHistory = [];
     document.getElementById('ai-apikey-bar').style.display = 'none';
     document.getElementById('ai-apikey-input').value = _groqKey;
   }
-  // Afficher le bouton flottant dès que l'app est visible
-  const obs = new MutationObserver(() => {
+  // Vérifier immédiatement + observer les changements
+  function checkFabVisibility() {
     const root = document.getElementById('app-root');
     if (root && root.style.display !== 'none') {
       document.getElementById('ai-fab').classList.add('visible');
@@ -4051,9 +4092,15 @@ let _aiHistory = [];
       document.getElementById('ai-fab').classList.remove('visible');
       document.getElementById('ai-panel').classList.remove('open');
     }
-  });
+  }
+  const obs = new MutationObserver(checkFabVisibility);
   const root = document.getElementById('app-root');
-  if (root) obs.observe(root, { attributes:true, attributeFilter:['style'] });
+  if (root) {
+    obs.observe(root, { attributes:true, attributeFilter:['style'] });
+    checkFabVisibility(); // vérification immédiate
+  }
+  // Fallback polling au cas où
+  setInterval(checkFabVisibility, 500);
 })();
 
 function saveGroqKey() {
@@ -4083,8 +4130,161 @@ function aiKeydown(e) {
 }
 
 function askSuggestion(btn) {
+  switchAiTab('chat');
   document.getElementById('ai-input').value = btn.textContent;
   sendAiMessage();
+}
+
+// ─── ONGLETS IA ───────────────────────────────────────────────
+function switchAiTab(tab) {
+  ['chat','analyse','saisie'].forEach(t => {
+    const btn = document.getElementById('ai-tab-' + t);
+    if(btn) btn.classList.toggle('active', t === tab);
+  });
+  // Messages chat
+  document.getElementById('ai-messages').style.display = tab === 'chat' ? 'flex' : 'none';
+  document.getElementById('ai-suggestions').style.display = tab === 'chat' ? 'flex' : 'none';
+  document.querySelector('#ai-panel > div:last-child').style.display = tab === 'chat' ? 'flex' : 'none'; // input bar
+  document.getElementById('ai-panel-analyse').style.display = tab === 'analyse' ? 'flex' : 'none';
+  document.getElementById('ai-panel-saisie').style.display = tab === 'saisie' ? 'flex' : 'none';
+}
+
+// ─── ANALYSE IA ───────────────────────────────────────────────
+async function runAnalyse(type) {
+  if(!_groqKey) { document.getElementById('ai-apikey-bar').style.display = 'flex'; return; }
+
+  const resultEl = document.getElementById('ai-analyse-result');
+  resultEl.style.display = 'block';
+  resultEl.textContent = '⏳ Analyse en cours…';
+
+  const prompts = {
+    fatigue: `Analyse la charge de travail et la fatigue de chaque IDE. Identifie qui a le plus de jours consécutifs, qui a le moins de repos, et qui risque l'épuisement. Donne des recommandations concrètes.`,
+    equilibre: `Analyse l'équilibre des week-ends et des gardes entre les IDEs. Qui travaille le plus de week-ends ? Y a-t-il des inégalités ? Propose des ajustements.`,
+    violations: `Explique en détail chaque violation détectée dans le planning. Pour chaque violation, explique pourquoi c'est problématique et comment la corriger concrètement.`,
+    prevision: `En analysant le planning actuel, identifie les périodes où la couverture sera insuffisante dans les prochaines semaines. Quels jours risquent d'être en sous-effectif ?`,
+    echanges: `Propose des échanges de postes entre IDEs pour mieux équilibrer la charge, les week-ends et les congés. Sois précis : qui échange quoi avec qui et quand.`
+  };
+
+  try {
+    const systemPrompt = buildPlanningContext();
+    const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + _groqKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'llama-3.1-70b-versatile',
+        max_tokens: 1200,
+        temperature: 0.3,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: prompts[type] }
+        ]
+      })
+    });
+    if(!resp.ok) throw new Error('Erreur ' + resp.status);
+    const data = await resp.json();
+    resultEl.textContent = data.choices?.[0]?.message?.content || '(Réponse vide)';
+  } catch(e) {
+    resultEl.textContent = '⚠ ' + e.message;
+    resultEl.style.background = '#FDEAEA';
+  }
+}
+
+// ─── SAISIE NATURELLE ─────────────────────────────────────────
+async function runSaisieNaturelle() {
+  if(!_groqKey) { document.getElementById('ai-apikey-bar').style.display = 'flex'; return; }
+  const text = document.getElementById('ai-saisie-input').value.trim();
+  if(!text) return;
+
+  const resultEl = document.getElementById('ai-saisie-result');
+  resultEl.style.display = 'block';
+  resultEl.style.background = '#F7F9FC';
+  resultEl.style.border = '1px solid #DDE3ED';
+  resultEl.style.color = '#0D1B2E';
+  resultEl.textContent = '⏳ Interprétation en cours…';
+
+  const idesJson = JSON.stringify(app.ides.map(i => ({ id: i.id, name: i.name, short: i.short })));
+  const codesJson = JSON.stringify(Object.keys(app.codes));
+
+  const systemPrompt = `Tu es un assistant qui convertit des instructions en langage naturel en modifications de planning infirmier.
+Tu dois répondre UNIQUEMENT en JSON valide, sans texte avant ou après.
+
+IDEs disponibles: ${idesJson}
+Codes disponibles: ${codesJson}
+Année: ${app.year}
+
+Réponds avec ce format JSON:
+{
+  "actions": [
+    { "ideId": 123, "dateStr": "2026-06-10", "code": "CA" }
+  ],
+  "description": "Résumé de ce qui va être appliqué"
+}
+
+Pour les suppressions de code, utilise code: null.
+dateStr format: YYYY-MM-DD`;
+
+  try {
+    const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + _groqKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'llama-3.1-70b-versatile',
+        max_tokens: 800,
+        temperature: 0.1,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: text }
+        ]
+      })
+    });
+    if(!resp.ok) throw new Error('Erreur ' + resp.status);
+    const data = await resp.json();
+    const raw = data.choices?.[0]?.message?.content || '{}';
+    const clean = raw.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(clean);
+
+    if(!parsed.actions || parsed.actions.length === 0) {
+      resultEl.textContent = "❓ Impossible d'interpréter cette instruction. Essayez d'être plus précis.";
+      return;
+    }
+
+    // Confirmer avec l'utilisateur
+    const confirm_msg = `${parsed.description || 'Modifications détectées'}
+
+${parsed.actions.length} modification(s) à appliquer. Confirmer ?`;
+    if(!confirm(confirm_msg)) {
+      resultEl.textContent = '❌ Annulé.';
+      return;
+    }
+
+    // Appliquer les modifications
+    let applied = 0;
+    for(const action of parsed.actions) {
+      const ide = app.ides.find(i => i.id == action.ideId);
+      if(!ide) continue;
+      if(!app.planning[action.ideId]) app.planning[action.ideId] = {};
+      if(action.code) {
+        app.planning[action.ideId][action.dateStr] = action.code;
+      } else {
+        delete app.planning[action.ideId][action.dateStr];
+      }
+      saveCellToSupabase(action.ideId, action.dateStr, action.code || null);
+      applied++;
+    }
+
+    refreshAll();
+    resultEl.style.background = '#EDFAF3';
+    resultEl.style.border = '1px solid #86efac';
+    resultEl.style.color = '#166534';
+    resultEl.textContent = `✅ ${applied} modification(s) appliquée(s) avec succès !`;
+    document.getElementById('ai-saisie-input').value = '';
+
+  } catch(e) {
+    resultEl.style.background = '#FDEAEA';
+    resultEl.style.border = '1px solid #f5c6cb';
+    resultEl.style.color = '#C0252D';
+    resultEl.textContent = '⚠ Erreur : ' + e.message;
+  }
 }
 
 function appendUserMsg(text) {
