@@ -3057,8 +3057,11 @@ function _hideAll() {
   document.getElementById('loading-screen').style.display = 'none';
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app-root').style.display = 'none';
-  document.getElementById('ide-view').style.display = 'none';
+  const iv = document.getElementById('ide-view');
+  iv.style.display = 'none';
+  iv.style.pointerEvents = 'none';
 }
+
 function showLoginScreen() {
   _hideAll();
   document.getElementById('login-screen').style.display = 'flex';
@@ -3957,6 +3960,7 @@ initApp();
   font-size:22px;color:#fff;
   align-items:center;justify-content:center;
   transition:transform .2s,box-shadow .2s;
+  pointer-events:all;
 ">✦</button>
 
 <!-- Panneau chat -->
