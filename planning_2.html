@@ -4333,15 +4333,24 @@ function buildPlanningContext() {
     return `- ${ide.name} (${ide.short}) : ${ide.pct}% — ${stats.worked} jours travaillés, ${stats.hours}h, ${stats.ca} CA, ${stats.am} AM, balance ${stats.balance}h`;
   }).join('\n');
 
-  // Planning COMPLET — format ultra-compressé pour tenir dans les tokens
-  // Format: IDE|MM-DD:CODE,MM-DD:CODE,...
+  // Planning 3 mois : précédent, en cours, suivant
+  const todayMonth = today.getMonth();
+  const months3 = [
+    (todayMonth + 11) % 12,
+    todayMonth,
+    (todayMonth + 1) % 12
+  ];
   let allPlanLines = [];
   app.ides.forEach(ide => {
     const plan = app.planning[ide.id] || {};
     const entries = Object.keys(plan)
-      .filter(ds => ds.startsWith(year+'') && plan[ds])
+      .filter(ds => {
+        if (!ds.startsWith(year+'')) return false;
+        const m = parseInt(ds.slice(5,7)) - 1;
+        return months3.includes(m);
+      })
       .sort()
-      .map(ds => `${ds.slice(5)}:${plan[ds]}`); // MM-DD:CODE
+      .map(ds => `${ds.slice(5)}:${plan[ds]}`);
     if (entries.length) allPlanLines.push(`${ide.short}|${entries.join(',')}`);
   });
 
