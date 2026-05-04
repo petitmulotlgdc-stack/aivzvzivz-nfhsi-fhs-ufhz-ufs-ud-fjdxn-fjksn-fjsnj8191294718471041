@@ -4300,13 +4300,54 @@ function appendUserMsg(text) {
   return el;
 }
 
-function appendBotMsg(text, loading=false) {
+function appendBotMsg(text, loading=false, actions=null) {
   const el = document.createElement('div');
   el.className = 'ai-msg bot' + (loading ? ' loading' : '');
-  el.textContent = text;
+  if (loading) {
+    el.textContent = text;
+  } else {
+    // Rendu markdown basique
+    const html = text
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g,'<em>$1</em>')
+      .replace(/^#{1,3} (.+)$/gm,'<strong>$1</strong>')
+      .replace(/^- (.+)$/gm,'• $1')
+      .replace(/\n/g,'<br>');
+    el.innerHTML = html;
+    // Boutons d'action si l'IA propose des modifications
+    if (actions && actions.length > 0) {
+      const actDiv = document.createElement('div');
+      actDiv.style.cssText = 'margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;';
+      const applyBtn = document.createElement('button');
+      applyBtn.textContent = '✅ Appliquer les modifications (' + actions.length + ')';
+      applyBtn.style.cssText = 'background:#0057A8;color:#fff;border:none;border-radius:6px;padding:6px 10px;font-size:12px;cursor:pointer;font-family:inherit;font-weight:600;';
+      applyBtn.onclick = () => applyAiActions(actions, applyBtn);
+      actDiv.appendChild(applyBtn);
+      el.appendChild(actDiv);
+    }
+  }
   document.getElementById('ai-messages').appendChild(el);
   scrollAi();
   return el;
+}
+
+async function applyAiActions(actions, btn) {
+  btn.disabled = true;
+  btn.textContent = '⏳ Application…';
+  let applied = 0;
+  for (const a of actions) {
+    const ide = app.ides.find(i => i.id == a.ideId);
+    if (!ide) continue;
+    if (!app.planning[a.ideId]) app.planning[a.ideId] = {};
+    if (a.code) app.planning[a.ideId][a.dateStr] = a.code;
+    else delete app.planning[a.ideId][a.dateStr];
+    await saveCellToSupabase(a.ideId, a.dateStr, a.code || null);
+    applied++;
+  }
+  refreshAll();
+  btn.textContent = '✅ ' + applied + ' modification(s) appliquée(s)';
+  btn.style.background = '#0D8A5E';
 }
 
 function appendErrorMsg(text) {
@@ -4358,7 +4399,16 @@ function buildPlanningContext() {
   const violations = checkViolations ? checkViolations() : [];
   const vioLines = violations.map(v => `- [${v.type}] ${v.msg}`).join('\n');
 
-  return `Tu es un assistant expert en planning infirmier. Tu dois répondre en français, de façon TRÈS concise et synthétique. Maximum 10 lignes. Pas de listes exhaustives, uniquement les points clés et chiffres importants. Utilise des tableaux simples si pertinent.
+  const idesIds = JSON.stringify(app.ides.map(i=>({id:i.id,name:i.name,short:i.short})));
+  const codesList = Object.keys(app.codes).join(',');
+
+  return `Tu es un assistant expert en planning infirmier. Réponds en français, de façon concise et lisible. Utilise **gras** pour les points importants et des listes courtes avec tirets.
+
+Si l'utilisateur demande une modification du planning (ex: "mets Marie en congé le 5 juin", "échange les postes de X et Y"), inclus à la FIN de ta réponse un bloc JSON entre balises <ACTIONS> et </ACTIONS> avec ce format exact:
+<ACTIONS>[{"ideId":123,"dateStr":"2026-06-05","code":"CA"}]</ACTIONS>
+IDEs disponibles: ${idesIds}
+Codes disponibles: ${codesList}
+Si pas de modification à faire, n'inclus pas de bloc ACTIONS.
 
 === CONTEXTE ===
 Date du jour : ${todayStr}
@@ -4428,10 +4478,20 @@ async function sendAiMessage() {
     }
 
     const data = await resp.json();
-    const answer = data.choices?.[0]?.message?.content || '(Réponse vide)';
+    let answer = data.choices?.[0]?.message?.content || '(Réponse vide)';
+
+    // Extraire les actions si présentes
+    let actions = null;
+    const actMatch = answer.match(/<ACTIONS>([\s\S]*?)<\/ACTIONS>/);
+    if (actMatch) {
+      try {
+        actions = JSON.parse(actMatch[1].trim());
+        answer = answer.replace(/<ACTIONS>[\s\S]*?<\/ACTIONS>/, '').trim();
+      } catch(e) { actions = null; }
+    }
 
     loadingEl.remove();
-    appendBotMsg(answer);
+    appendBotMsg(answer, false, actions);
     _aiHistory.push({ role: 'assistant', content: answer });
 
     // Garder l'historique raisonnable (10 derniers échanges)
