@@ -4080,7 +4080,7 @@ initApp();
 let _geminiKey = localStorage.getItem('gemini_api_key') || '';
 
 async function callGemini(systemPrompt, userMessage, history=[]) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${_geminiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${_geminiKey}`;
   const contents = [
     ...history,
     { role: 'user', parts: [{ text: userMessage }] }
