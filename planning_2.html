@@ -754,6 +754,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   <meta name="theme-color" content="#0057A8">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="PlanningIDE">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -4021,17 +4022,29 @@ initApp();
 
 
   <!-- Input -->
-  <div style="padding:10px 12px;border-top:1px solid #DDE3ED;display:flex;gap:8px;flex-shrink:0;background:#fff;">
-    <textarea id="ai-input" rows="2" placeholder="Ex: Qui est en congé la semaine prochaine ?" onkeydown="aiKeydown(event)" style="
-      flex:1;border:1px solid #DDE3ED;border-radius:8px;padding:8px 10px;
-      font-size:13px;font-family:inherit;resize:none;outline:none;color:#0D1B2E;
-      line-height:1.4;
-    "></textarea>
-    <button id="ai-send-btn" onclick="sendAiMessage()" style="
-      width:38px;height:38px;border-radius:8px;align-self:flex-end;
-      background:#0057A8;border:none;cursor:pointer;color:#fff;font-size:16px;
-      display:flex;align-items:center;justify-content:center;flex-shrink:0;
-    ">↑</button>
+  <div style="padding:10px 12px;border-top:1px solid #DDE3ED;display:flex;flex-direction:column;gap:6px;flex-shrink:0;background:#fff;">
+    <div id="ai-file-preview" style="display:none;background:#EEF2F7;border-radius:6px;padding:6px 10px;font-size:11.5px;color:#0057A8;display:flex;align-items:center;gap:6px;">
+      <span id="ai-file-name"></span>
+      <button onclick="removeAiFile()" style="background:none;border:none;cursor:pointer;color:#94A3B8;font-size:14px;margin-left:auto;">×</button>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="document.getElementById('ai-file-input').click()" title="Joindre un PDF ou Excel" style="
+        width:36px;height:36px;border-radius:8px;align-self:flex-end;flex-shrink:0;
+        background:#EEF2F7;border:1px solid #DDE3ED;cursor:pointer;font-size:16px;
+        display:flex;align-items:center;justify-content:center;
+      ">📎</button>
+      <input type="file" id="ai-file-input" accept=".pdf,.xlsx,.xls,.csv" style="display:none;" onchange="handleAiFile(event)"/>
+      <textarea id="ai-input" rows="2" placeholder="Question ou modification… (📎 pour joindre un PDF/Excel)" onkeydown="aiKeydown(event)" style="
+        flex:1;border:1px solid #DDE3ED;border-radius:8px;padding:8px 10px;
+        font-size:13px;font-family:inherit;resize:none;outline:none;color:#0D1B2E;
+        line-height:1.4;
+      "></textarea>
+      <button id="ai-send-btn" onclick="sendAiMessage()" style="
+        width:36px;height:36px;border-radius:8px;align-self:flex-end;
+        background:#0057A8;border:none;cursor:pointer;color:#fff;font-size:16px;
+        display:flex;align-items:center;justify-content:center;flex-shrink:0;
+      ">↑</button>
+    </div>
   </div>
 </div>
 
@@ -4066,9 +4079,53 @@ initApp();
 </style>
 
 <script>
-// ─── GROQ CHAT ───────────────────────────────────────────────
+// ─── AI CHAT ───────────────────────────────────────────────
 
 let _geminiKey = localStorage.getItem('mistral_api_key') || '';
+let _aiFile = null; // { name, type, content } fichier joint
+
+function handleAiFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const preview = document.getElementById('ai-file-preview');
+  document.getElementById('ai-file-name').textContent = '📄 ' + file.name;
+  preview.style.display = 'flex';
+
+  const reader = new FileReader();
+  if (file.name.endsWith('.pdf')) {
+    reader.onload = e => {
+      _aiFile = { name: file.name, type: 'pdf', data: e.target.result.split(',')[1] };
+    };
+    reader.readAsDataURL(file);
+  } else {
+    // Excel/CSV : lire comme texte via SheetJS si dispo, sinon texte brut
+    reader.onload = e => {
+      try {
+        if (typeof XLSX !== 'undefined') {
+          const wb = XLSX.read(e.target.result, { type: 'binary' });
+          let text = '';
+          wb.SheetNames.forEach(name => {
+            text += '=== ' + name + ' ===\n';
+            text += XLSX.utils.sheet_to_csv(wb.Sheets[name]) + '\n';
+          });
+          _aiFile = { name: file.name, type: 'excel', content: text.slice(0, 8000) };
+        } else {
+          _aiFile = { name: file.name, type: 'text', content: e.target.result.slice(0, 8000) };
+        }
+      } catch(err) {
+        _aiFile = { name: file.name, type: 'text', content: e.target.result.slice(0, 8000) };
+      }
+    };
+    reader.readAsBinaryString(file);
+  }
+  event.target.value = '';
+}
+
+function removeAiFile() {
+  _aiFile = null;
+  document.getElementById('ai-file-preview').style.display = 'none';
+  document.getElementById('ai-file-name').textContent = '';
+}
 
 async function callMistral(systemPrompt, userMessage, history=[]) {
   // Mistral : history ne doit contenir que user/assistant en alternance
@@ -4244,16 +4301,7 @@ dateStr format: YYYY-MM-DD`;
       return;
     }
 
-    // Confirmer avec l'utilisateur
-    const confirm_msg = `${parsed.description || 'Modifications détectées'}
-
-${parsed.actions.length} modification(s) à appliquer. Confirmer ?`;
-    if(!confirm(confirm_msg)) {
-      resultEl.textContent = '❌ Annulé.';
-      return;
-    }
-
-    // Appliquer les modifications
+    // Appliquer les modifications directement
     let applied = 0;
     for(const action of parsed.actions) {
       const ide = app.ides.find(i => i.id == action.ideId);
@@ -4340,6 +4388,12 @@ async function applyAiActions(actions, btn) {
   refreshAll();
   btn.textContent = '✅ ' + applied + ' modification(s) appliquée(s)';
   btn.style.background = '#0D8A5E';
+  btn.style.cursor = 'default';
+  // Fermer le panel après 1.5s
+  setTimeout(() => {
+    const panel = document.getElementById('ai-panel');
+    if (panel) panel.style.display = 'none';
+  }, 1500);
 }
 
 function appendErrorMsg(text) {
@@ -4472,7 +4526,18 @@ async function sendAiMessage() {
       role: m.role,
       content: m.content
     }));
-    const lastMsg = _aiHistory[_aiHistory.length-1].content;
+    let lastMsg = _aiHistory[_aiHistory.length-1].content;
+
+    // Ajouter le contenu du fichier si présent
+    if (_aiFile) {
+      if (_aiFile.type === 'pdf') {
+        lastMsg += '\n\n[Fichier joint: ' + _aiFile.name + ' — PDF joint en base64, analyse son contenu et extrait les roulements/horaires]';
+      } else {
+        lastMsg += '\n\n[Fichier joint: ' + _aiFile.name + ']\n' + _aiFile.content;
+      }
+      removeAiFile();
+    }
+
     let answer = await callMistral(systemPrompt, lastMsg, historyForMistral);
 
     // Extraire les actions si présentes
