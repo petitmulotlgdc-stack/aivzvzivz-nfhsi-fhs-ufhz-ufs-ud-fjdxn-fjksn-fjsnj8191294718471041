@@ -4116,7 +4116,8 @@ function saveGroqKey() {
 
 function toggleAiChat() {
   const panel = document.getElementById('ai-panel');
-  const isOpen = panel.classList.toggle('open');
+  const isOpen = panel.style.display === 'none' || panel.style.display === '';
+  panel.style.display = isOpen ? 'flex' : 'none';
   if (isOpen && _aiHistory.length === 0) {
     appendBotMsg('👋 Bonjour ! Je suis votre assistant planning. Je connais tous les IDEs, leurs plannings, les codes et les statistiques.\n\nQue souhaitez-vous savoir ?');
   }
