@@ -3985,8 +3985,8 @@ initApp();
 
   <!-- Config Groq API key (si pas encore saisie) -->
   <div id="ai-apikey-bar" style="padding:10px 14px;background:#FEF3E6;border-bottom:1px solid #f0d9bc;display:flex;align-items:center;gap:8px;flex-shrink:0;">
-    <span style="font-size:11px;color:#C05800;flex-shrink:0;">🔑 Clé Gemini :</span>
-    <input id="ai-apikey-input" type="password" placeholder="AIza…" style="flex:1;border:1px solid #f0d9bc;border-radius:6px;padding:4px 8px;font-size:12px;outline:none;font-family:inherit;" />
+    <span style="font-size:11px;color:#C05800;flex-shrink:0;">🔑 Clé Mistral :</span>
+    <input id="ai-apikey-input" type="password" placeholder="sk-…" style="flex:1;border:1px solid #f0d9bc;border-radius:6px;padding:4px 8px;font-size:12px;outline:none;font-family:inherit;" />
     <button onclick="saveGroqKey()" style="background:#C05800;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;font-weight:600;">OK</button>
   </div>
 
@@ -4077,29 +4077,33 @@ initApp();
 <script>
 // ─── GROQ CHAT ───────────────────────────────────────────────
 
-let _geminiKey = localStorage.getItem('gemini_api_key') || '';
+let _geminiKey = localStorage.getItem('mistral_api_key') || '';
 
-async function callGemini(systemPrompt, userMessage, history=[]) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${_geminiKey}`;
-  const contents = [
+async function callMistral(systemPrompt, userMessage, history=[]) {
+  const messages = [
+    { role: 'system', content: systemPrompt },
     ...history,
-    { role: 'user', parts: [{ text: userMessage }] }
+    { role: 'user', content: userMessage }
   ];
-  const resp = await fetch(url, {
+  const resp = await fetch('https://api.mistral.ai/v1/chat/completions', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Authorization': 'Bearer ' + _geminiKey,
+      'Content-Type': 'application/json'
+    },
     body: JSON.stringify({
-      system_instruction: { parts: [{ text: systemPrompt }] },
-      contents,
-      generationConfig: { temperature: 0.3, maxOutputTokens: 1200 }
+      model: 'mistral-small-latest',
+      messages,
+      max_tokens: 1200,
+      temperature: 0.3
     })
   });
   if (!resp.ok) {
     const err = await resp.json().catch(()=>({}));
-    throw new Error(err.error?.message || 'Erreur HTTP ' + resp.status);
+    throw new Error(err.message || err.error?.message || 'Erreur HTTP ' + resp.status);
   }
   const data = await resp.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || '(Réponse vide)';
+  return data.choices?.[0]?.message?.content || '(Réponse vide)';
 }
 let _aiHistory = [];
 
@@ -4131,9 +4135,9 @@ let _aiHistory = [];
 
 function saveGroqKey() {
   const k = document.getElementById('ai-apikey-input').value.trim();
-  if (!k.startsWith('AIza')) { alert('La clé Gemini doit commencer par "AIza"'); return; }
+  if (!k.length > 10) { alert('Clé invalide (trop courte)'); return; }
   _geminiKey = k;
-  localStorage.setItem('gemini_api_key', k);
+  localStorage.setItem('mistral_api_key', k);
   document.getElementById('ai-apikey-bar').style.display = 'none';
 }
 
@@ -4194,7 +4198,7 @@ async function runAnalyse(type) {
 
   try {
     const systemPrompt = buildPlanningContext();
-    const answer = await callGemini(systemPrompt, prompts[type]);
+    const answer = await callMistral(systemPrompt, prompts[type]);
     resultEl.innerHTML = answer
       .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
       .replace(/[*][*](.+?)[*][*]/g,'<strong>$1</strong>')
@@ -4240,7 +4244,7 @@ Pour les suppressions de code, utilise code: null.
 dateStr format: YYYY-MM-DD`;
 
   try {
-    const raw = await callGemini(systemPrompt, text);
+    const raw = await callMistral(systemPrompt, text);
     const clean = raw.replace(/```json|```/g, '').trim();
     const parsed = JSON.parse(clean);
 
@@ -4450,7 +4454,7 @@ async function sendAiMessage() {
       parts: [{ text: m.content }]
     }));
     const lastMsg = _aiHistory[_aiHistory.length-1].content;
-    let answer = await callGemini(systemPrompt, lastMsg, historyForGemini);
+    let answer = await callMistral(systemPrompt, lastMsg, historyForGemini);
 
     // Extraire les actions si présentes
     let actions = null;
