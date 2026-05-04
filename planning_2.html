@@ -3997,7 +3997,6 @@ initApp();
   <div style="display:flex;border-bottom:1px solid #DDE3ED;flex-shrink:0;background:#fff;">
     <button class="ai-tab active" onclick="switchAiTab('chat')" id="ai-tab-chat">💬 Chat</button>
     <button class="ai-tab" onclick="switchAiTab('analyse')" id="ai-tab-analyse">📊 Analyse</button>
-    <button class="ai-tab" onclick="switchAiTab('saisie')" id="ai-tab-saisie">✏️ Saisie</button>
   </div>
 
   <!-- Suggestions rapides (chat) -->
@@ -4005,7 +4004,7 @@ initApp();
     <button class="ai-suggest" onclick="askSuggestion(this)">Qui travaille aujourd'hui ?</button>
     <button class="ai-suggest" onclick="askSuggestion(this)">Violations actuelles ?</button>
     <button class="ai-suggest" onclick="askSuggestion(this)">Équilibre week-ends</button>
-    <button class="ai-suggest" onclick="askSuggestion(this)">Qui est disponible vendredi ?</button>
+    <button class="ai-suggest" onclick="askSuggestion(this)">Mets [prénom] en congé le [date]</button>
   </div>
 
   <!-- Panel Analyse -->
@@ -4019,15 +4018,7 @@ initApp();
     <div id="ai-analyse-result" style="margin-top:8px;font-size:12.5px;line-height:1.6;color:#0D1B2E;white-space:pre-wrap;background:#F7F9FC;border:1px solid #DDE3ED;border-radius:8px;padding:10px;display:none;"></div>
   </div>
 
-  <!-- Panel Saisie naturelle -->
-  <div id="ai-panel-saisie" style="display:none;flex:1;overflow-y:auto;padding:12px;flex-direction:column;gap:8px;">
-    <div style="font-size:12px;font-weight:700;color:#0D1B2E;">Saisie en langage naturel</div>
-    <div style="font-size:11.5px;color:#64748B;line-height:1.5;">Décrivez une modification en français et l'IA l'appliquera automatiquement.</div>
-    <div style="font-size:11px;color:#94A3B8;font-style:italic;">Ex: "Marie en congés du 10 au 20 juin", "Sophie travaille samedi prochain", "Remplace le J de Lucas le 5 par un N"</div>
-    <textarea id="ai-saisie-input" rows="4" placeholder="Décrivez la modification…" style="border:1px solid #DDE3ED;border-radius:8px;padding:8px;font-size:13px;font-family:inherit;resize:none;outline:none;color:#0D1B2E;line-height:1.4;"></textarea>
-    <button onclick="runSaisieNaturelle()" style="background:#0057A8;color:#fff;border:none;border-radius:8px;padding:9px;font-size:13px;font-weight:600;cursor:pointer;">Appliquer avec l'IA ✦</button>
-    <div id="ai-saisie-result" style="font-size:12px;line-height:1.5;display:none;padding:8px;border-radius:8px;"></div>
-  </div>
+
 
   <!-- Input -->
   <div style="padding:10px 12px;border-top:1px solid #DDE3ED;display:flex;gap:8px;flex-shrink:0;background:#fff;">
@@ -4170,16 +4161,14 @@ function askSuggestion(btn) {
 
 // ─── ONGLETS IA ───────────────────────────────────────────────
 function switchAiTab(tab) {
-  ['chat','analyse','saisie'].forEach(t => {
+  ['chat','analyse'].forEach(t => {
     const btn = document.getElementById('ai-tab-' + t);
     if(btn) btn.classList.toggle('active', t === tab);
   });
-  // Messages chat
   document.getElementById('ai-messages').style.display = tab === 'chat' ? 'flex' : 'none';
   document.getElementById('ai-suggestions').style.display = tab === 'chat' ? 'flex' : 'none';
-  document.querySelector('#ai-panel > div:last-child').style.display = tab === 'chat' ? 'flex' : 'none'; // input bar
+  document.querySelector('#ai-panel > div:last-child').style.display = tab === 'chat' ? 'flex' : 'none';
   document.getElementById('ai-panel-analyse').style.display = tab === 'analyse' ? 'flex' : 'none';
-  document.getElementById('ai-panel-saisie').style.display = tab === 'saisie' ? 'flex' : 'none';
 }
 
 // ─── ANALYSE IA ───────────────────────────────────────────────
