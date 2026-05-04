@@ -2365,10 +2365,11 @@ function confirmCell() {
   const settingWork = app.selectedCode && isWorkCode(app.selectedCode);
   if(app.selectedCode) app.planning[ideId][ds] = app.selectedCode;
   else delete app.planning[ideId][ds];
+  // Sauvegarde temps reel
+  saveCellToSupabase(ideId, ds, app.selectedCode || null);
   closeModal('cell-modal');
-  // Si on affecte un poste de travail sur un jour férié → proposer RJF
   if(wasHoliday && settingWork) {
-    if(confirm(`${ds} est un jour férié travaillé.\nAjouter automatiquement un RJF (récup. jour férié) sur le prochain jour libre ?`)) {
+    if(confirm(`${ds} est un jour ferie travaille.\nAjouter automatiquement un RJF sur le prochain jour libre ?`)) {
       const all = allDatesOfYear(app.year);
       const idx = all.indexOf(ds);
       for(let i = idx+1; i < all.length; i++) {
@@ -2377,6 +2378,7 @@ function confirmCell() {
         if(!existing || existing === '') {
           if(!app.planning[ideId]) app.planning[ideId] = {};
           app.planning[ideId][nd] = 'RJF';
+          saveCellToSupabase(ideId, nd, 'RJF');
           break;
         }
       }
@@ -2389,8 +2391,52 @@ function clearCell() {
   if(!app.editingCell) return;
   const { ideId, ds } = app.editingCell;
   if(app.planning[ideId]) delete app.planning[ideId][ds];
+  saveCellToSupabase(ideId, ds, null);
   closeModal('cell-modal');
   refreshAll();
+}
+
+async function saveCellToSupabase(ideId, ds, code) {
+  if(!app.serviceId) return; // pas de service = pas de sauvegarde auto
+  const sb = getSB();
+  if(code) {
+    await sb.from('planning_data').upsert({
+      ide_id: ideId,
+      date_str: ds,
+      year: app.year,
+      code: code,
+      service_id: app.serviceId,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'ide_id,date_str' });
+  } else {
+    await sb.from('planning_data').delete().eq('ide_id', ideId).eq('date_str', ds);
+  }
+}
+
+// Realtime — synchro live entre cadres/onglets
+let _realtimeChannel = null;
+function startRealtimeSync() {
+  if(!app.serviceId) return;
+  const sb = getSB();
+  if(_realtimeChannel) sb.removeChannel(_realtimeChannel);
+  _realtimeChannel = sb.channel('planning-' + app.serviceId)
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'planning_data',
+      filter: 'service_id=eq.' + app.serviceId
+    }, payload => {
+      const row = payload.new || payload.old;
+      if(!row) return;
+      if(payload.eventType === 'DELETE') {
+        if(app.planning[row.ide_id]) delete app.planning[row.ide_id][row.date_str];
+      } else {
+        if(!app.planning[row.ide_id]) app.planning[row.ide_id] = {};
+        app.planning[row.ide_id][row.date_str] = row.code;
+      }
+      refreshAll();
+    })
+    .subscribe();
 }
 
 // =============================
@@ -2482,7 +2528,7 @@ async function confirmAddIde() {
     const profileRes = await fetch(`${SUPABASE_URL}/rest/v1/profiles`, {
       method: 'POST',
       headers: { ...adminHeaders, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
-      body: JSON.stringify({ id: userId, role: 'ide', ide_id: newIde.id, display_name: name, must_change_password: true })
+      body: JSON.stringify({ id: userId, role: 'ide', ide_id: newIde.id, display_name: name, must_change_password: true, service_id: app.serviceId || null })
     });
     if (!profileRes.ok) {
       const err = await profileRes.json().catch(() => ({}));
@@ -3052,16 +3098,17 @@ async function handleLogin(user) {
     document.getElementById('publish-btn').style.display = '';
     document.getElementById('logout-btn').style.display = '';
     document.getElementById('tab-btn-requests').style.display = '';
+    await ensureCadreService(user.id, profile);
     showCadreView();
     await loadAppConfig();
     await loadPlanningFromSupabase();
     refreshAll();
     startRequestsPolling();
+    startRealtimeSync();
   } else {
     document.getElementById('logout-btn').style.display = '';
     await loadAppConfig();
     if (profile.must_change_password) {
-      // Premier login : forcer le changement de mot de passe avant tout accès
       showIdeView();
       _renderChangePasswordScreen(profile.ide_id);
     } else {
@@ -3069,6 +3116,26 @@ async function handleLogin(user) {
       await loadIdePlanningAndShow(profile.ide_id);
     }
   }
+}
+
+async function ensureCadreService(userId, profile) {
+  const sb = getSB();
+  let { data: service } = await sb.from('services').select('*').eq('cadre_id', userId).single();
+  if (!service) {
+    const serviceName = prompt('Bienvenue ! Quel est le nom de votre service ?', 'Service Medecine') || 'Mon Service';
+    const { data: newService, error } = await sb.from('services').insert({
+      name: serviceName,
+      cadre_id: userId,
+      min_ide_per_day: app.minIdePerjour,
+      we_freq: app.weFreq,
+      year: app.year
+    }).select().single();
+    if (error) { alert('Erreur creation service : ' + error.message); return; }
+    service = newService;
+    await sb.from('profiles').update({ service_id: service.id }).eq('id', userId);
+  }
+  app.serviceId = service.id;
+  app.serviceName = service.name;
 }
 
 function _renderChangePasswordScreen(ideId) {
@@ -3197,7 +3264,7 @@ async function publishPlanning() {
     const plan = app.planning[ide.id] || {};
     Object.keys(plan).forEach(ds => {
       if (!SKIP_CODES.has(plan[ds])) {
-        rows.push({ year: app.year, ide_id: ide.id, date_str: ds, code: plan[ds] });
+        rows.push({ year: app.year, ide_id: ide.id, date_str: ds, code: plan[ds], service_id: app.serviceId || null });
       }
     });
   });
@@ -3218,24 +3285,55 @@ async function publishPlanning() {
 // =============================
 async function saveIdesConfig() {
   const sb = getSB();
-  await sb.from('app_config').upsert({ key: 'ides', value: app.ides, updated_at: new Date().toISOString() });
+  if (app.serviceId) {
+    // Nouvelle archi : sauvegarder dans la table ides
+    for (const ide of app.ides) {
+      await sb.from('ides').upsert({
+        id: ide.id,
+        service_id: app.serviceId,
+        name: ide.name,
+        short: ide.short,
+        pct: ide.pct,
+        color: ide.color,
+        roulement: ide.roulement,
+        roulement_offset: ide.roulementOffset
+      }, { onConflict: 'id' });
+    }
+  } else {
+    // Fallback ancien systeme
+    await sb.from('app_config').upsert({ key: 'ides', value: app.ides, updated_at: new Date().toISOString() });
+  }
 }
 
 async function loadAppConfig() {
   const sb = getSB();
-  const { data } = await sb.from('app_config').select('key, value');
-  if (!data) return;
-  let idesFound = false;
-  data.forEach(row => {
-    // On écrase les IDEs codées en dur dès que la clé existe dans Supabase,
-    // même si le tableau est vide (suppression de toutes les IDEs voulue)
-    if (row.key === 'ides' && Array.isArray(row.value)) {
-      app.ides = row.value;
-      idesFound = true;
+  if (app.serviceId) {
+    // Nouvelle archi : charger les IDEs depuis la table ides
+    const { data: idesData } = await sb.from('ides').select('*').eq('service_id', app.serviceId);
+    if (idesData && idesData.length > 0) {
+      app.ides = idesData.map(row => ({
+        id: row.id,
+        name: row.name,
+        short: row.short,
+        pct: row.pct,
+        color: row.color || AVATAR_COLORS[0],
+        roulement: row.roulement || 'R-6S',
+        roulementOffset: row.roulement_offset || 0
+      }));
     }
-  });
-  // Première utilisation : sauvegarder les IDEs par défaut pour que la clé existe
-  if (!idesFound) await saveIdesConfig();
+  } else {
+    // Fallback ancien systeme
+    const { data } = await sb.from('app_config').select('key, value');
+    if (!data) return;
+    let idesFound = false;
+    data.forEach(row => {
+      if (row.key === 'ides' && Array.isArray(row.value)) {
+        app.ides = row.value;
+        idesFound = true;
+      }
+    });
+    if (!idesFound) await saveIdesConfig();
+  }
 }
 
 // =============================
@@ -3243,12 +3341,13 @@ async function loadPlanningFromSupabase() {
   const sb = getSB();
   const PAGE = 500;
   let from = 0;
+  let query = sb.from('planning_data').select('*').eq('year', app.year);
+  if (app.serviceId) query = query.eq('service_id', app.serviceId);
   while (true) {
-    const { data, error } = await sb.from('planning_data')
-      .select('*').eq('year', app.year).range(from, from + PAGE - 1);
+    const { data, error } = await query.range(from, from + PAGE - 1);
     if (error || !data || data.length === 0) break;
     data.forEach(row => {
-      if (row.code === 'RJF') return; // recalculé à la génération
+      if (row.code === 'RJF') return;
       if (!app.planning[row.ide_id]) app.planning[row.ide_id] = {};
       app.planning[row.ide_id][row.date_str] = row.code;
     });
