@@ -4175,7 +4175,7 @@ async function runAnalyse(type) {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + _groqKey, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        model: 'llama3-8b-8192',
         max_tokens: 1200,
         temperature: 0.3,
         messages: [
@@ -4232,7 +4232,7 @@ dateStr format: YYYY-MM-DD`;
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + _groqKey, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        model: 'llama3-8b-8192',
         max_tokens: 800,
         temperature: 0.1,
         messages: [
@@ -4412,7 +4412,7 @@ async function sendAiMessage() {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        model: 'llama3-8b-8192',
         max_tokens: 800,
         temperature: 0.3,
         messages: [
