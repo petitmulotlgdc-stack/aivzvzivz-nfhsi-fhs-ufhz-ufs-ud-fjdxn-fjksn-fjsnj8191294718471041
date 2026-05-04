@@ -4325,57 +4325,57 @@ function scrollAi() {
 function buildPlanningContext() {
   const today = new Date();
   const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  const year = app.year;
 
-  // IDEs
+  // IDEs avec stats complètes
   const idesInfo = app.ides.map(ide => {
     const stats = computeStats(ide);
-    return `- ${ide.name} (${ide.short}) : ${ide.pct}% — ${stats.worked} jours travaillés, ${stats.hours}h, ${stats.ca} CA, ${stats.am} AM`;
+    return `- ${ide.name} (${ide.short}) : ${ide.pct}% — ${stats.worked} jours travaillés, ${stats.hours}h, ${stats.ca} CA, ${stats.am} AM, balance ${stats.balance}h`;
   }).join('\n');
 
-  // Planning du mois courant (ou mois en cours si vue annuelle)
-  const viewMonth = app.currentMonth >= 0 ? app.currentMonth : today.getMonth();
-  const year = app.year;
-  const daysInM = new Date(year, viewMonth+1, 0).getDate();
-  const monthName = MONTHS[viewMonth];
-
-  let planLines = [];
-  for (let d = 1; d <= daysInM; d++) {
-    const ds = dateStr(year, viewMonth, d);
-    const dayWorkers = app.ides.filter(ide => {
-      const code = (app.planning[ide.id]||{})[ds];
-      return code && app.codes[code] && app.codes[code].type === 'work';
-    }).map(ide => ide.short);
-    const absentees = app.ides.filter(ide => {
-      const code = (app.planning[ide.id]||{})[ds];
-      return code && ['ca','absence','formation'].includes(app.codes[code]?.type);
-    }).map(ide => `${ide.short}(${(app.planning[ide.id]||{})[ds]})`);
-    if (dayWorkers.length || absentees.length) {
-      planLines.push(`  ${ds}: travail=[${dayWorkers.join(',')}]${absentees.length?' absences=['+absentees.join(',')+']':''}`);
+  // Planning COMPLET de toute l'année, mois par mois
+  let allPlanLines = [];
+  for (let m = 0; m < 12; m++) {
+    const daysInM = new Date(year, m+1, 0).getDate();
+    const monthName = MONTHS[m];
+    let monthLines = [];
+    for (let d = 1; d <= daysInM; d++) {
+      const ds = `${year}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const entries = [];
+      app.ides.forEach(ide => {
+        const code = (app.planning[ide.id]||{})[ds];
+        if (code) entries.push(`${ide.short}:${code}`);
+      });
+      if (entries.length) monthLines.push(`  ${ds}: ${entries.join(', ')}`);
+    }
+    if (monthLines.length) {
+      allPlanLines.push(`--- ${monthName.toUpperCase()} ---`);
+      allPlanLines.push(...monthLines);
     }
   }
 
   // Violations
   const violations = checkViolations ? checkViolations() : [];
-  const vioLines = violations.slice(0,10).map(v => `- [${v.type}] ${v.msg}`).join('\n');
+  const vioLines = violations.map(v => `- [${v.type}] ${v.msg}`).join('\n');
 
   return `Tu es un assistant expert en planning infirmier. Tu dois répondre en français, de façon claire et concise.
 
-=== CONTEXTE PLANNING ===
+=== CONTEXTE ===
 Date du jour : ${todayStr}
-Année affichée : ${year}
-Mois en vue : ${monthName} ${year}
+Année : ${year}
+Service : ${app.serviceName || 'Non défini'}
 Effectif minimum par jour : ${app.minIdePerjour}
 
 === INFIRMIÈRES (IDEs) ===
 ${idesInfo}
 
-=== CODES UTILISÉS ===
-${Object.entries(app.codes).map(([k,v])=>`${k} = ${v.label}`).join(', ')}
+=== CODES ===
+${Object.entries(app.codes).map(([k,v])=>`${k}=${v.label}(${v.type})`).join(', ')}
 
-=== PLANNING ${monthName.toUpperCase()} ${year} ===
-${planLines.join('\n') || '(Aucune donnée pour ce mois)'}
+=== PLANNING ANNUEL COMPLET ===
+${allPlanLines.join('\n') || '(Aucune donnée)'}
 
-=== VIOLATIONS DÉTECTÉES ===
+=== VIOLATIONS ===
 ${vioLines || 'Aucune violation'}
 
 Réponds toujours de façon directe et utile. Si une info n'est pas dans le contexte, dis-le clairement.`;
