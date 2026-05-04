@@ -3953,7 +3953,7 @@ initApp();
 
 <!-- Bouton flottant -->
 <button id="ai-fab" onclick="toggleAiChat()" title="Assistant IA" style="
-  position:fixed;bottom:24px;right:24px;z-index:9000;
+  position:fixed;bottom:24px;left:24px;z-index:9000;
   width:52px;height:52px;border-radius:50%;
   background:linear-gradient(135deg,#0057A8,#0D8A5E);
   border:none;cursor:pointer;
@@ -3966,10 +3966,10 @@ initApp();
 
 <!-- Panneau chat -->
 <div id="ai-panel" style="
-  display:none;position:fixed;bottom:0;right:0;
+  display:none;position:fixed;bottom:0;left:0;
   width:380px;height:100vh;max-height:100vh;
-  background:#fff;border-left:1px solid #DDE3ED;
-  box-shadow:-4px 0 24px rgba(13,27,46,0.12);
+  background:#fff;border-right:1px solid #DDE3ED;
+  box-shadow:4px 0 24px rgba(13,27,46,0.12);
   z-index:8999;flex-direction:column;
   font-family:'Inter','Helvetica Neue',sans-serif;
 ">
@@ -4193,9 +4193,9 @@ function saveGroqKey() {
 
 function toggleAiChat() {
   const panel = document.getElementById('ai-panel');
-  const isOpen = panel.style.display === 'none' || panel.style.display === '';
-  panel.style.display = isOpen ? 'flex' : 'none';
-  if (isOpen && _aiHistory.length === 0) {
+  const isOpen = panel.style.display === 'flex';
+  panel.style.display = isOpen ? 'none' : 'flex';
+  if (!isOpen && _aiHistory.length === 0) {
     appendBotMsg('👋 Bonjour ! Je suis votre assistant planning. Je connais tous les IDEs, leurs plannings, les codes et les statistiques.\n\nQue souhaitez-vous savoir ?');
   }
 }
@@ -4389,11 +4389,6 @@ async function applyAiActions(actions, btn) {
   btn.textContent = '✅ ' + applied + ' modification(s) appliquée(s)';
   btn.style.background = '#0D8A5E';
   btn.style.cursor = 'default';
-  // Fermer le panel après 1.5s
-  setTimeout(() => {
-    const panel = document.getElementById('ai-panel');
-    if (panel) panel.style.display = 'none';
-  }, 1500);
 }
 
 function appendErrorMsg(text) {
