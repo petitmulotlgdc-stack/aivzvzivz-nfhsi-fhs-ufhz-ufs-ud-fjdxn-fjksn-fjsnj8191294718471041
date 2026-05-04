@@ -3843,5 +3843,309 @@ initApp();
     </div>
   </div>
 </div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     CHAT IA GROQ — Bouton flottant + panneau latéral
+     ═══════════════════════════════════════════════════════════ -->
+
+<!-- Bouton flottant -->
+<button id="ai-fab" onclick="toggleAiChat()" title="Assistant IA" style="
+  display:none;
+  position:fixed;bottom:24px;right:24px;z-index:700;
+  width:52px;height:52px;border-radius:50%;
+  background:linear-gradient(135deg,#0057A8,#0D8A5E);
+  border:none;cursor:pointer;
+  box-shadow:0 4px 16px rgba(0,87,168,0.4);
+  font-size:22px;color:#fff;
+  align-items:center;justify-content:center;
+  transition:transform .2s,box-shadow .2s;
+">✦</button>
+
+<!-- Panneau chat -->
+<div id="ai-panel" style="
+  display:none;position:fixed;bottom:0;right:0;
+  width:380px;height:100vh;max-height:100vh;
+  background:#fff;border-left:1px solid #DDE3ED;
+  box-shadow:-4px 0 24px rgba(13,27,46,0.12);
+  z-index:699;flex-direction:column;
+  font-family:'Inter','Helvetica Neue',sans-serif;
+">
+  <!-- Header -->
+  <div style="padding:14px 16px;border-bottom:1px solid #DDE3ED;display:flex;align-items:center;gap:10px;background:#fff;flex-shrink:0;">
+    <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#0057A8,#0D8A5E);display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;flex-shrink:0;">✦</div>
+    <div style="flex:1;">
+      <div style="font-weight:700;font-size:13.5px;color:#0D1B2E;">Assistant Planning IA</div>
+      <div style="font-size:11px;color:#94A3B8;" id="ai-status">Posez une question sur le planning…</div>
+    </div>
+    <button onclick="clearAiChat()" title="Effacer" style="background:none;border:none;cursor:pointer;color:#94A3B8;font-size:16px;padding:4px;line-height:1;" title="Effacer la conversation">🗑</button>
+    <button onclick="toggleAiChat()" style="background:none;border:none;cursor:pointer;color:#94A3B8;font-size:20px;padding:4px;line-height:1;">×</button>
+  </div>
+
+  <!-- Config Groq API key (si pas encore saisie) -->
+  <div id="ai-apikey-bar" style="padding:10px 14px;background:#FEF3E6;border-bottom:1px solid #f0d9bc;display:flex;align-items:center;gap:8px;flex-shrink:0;">
+    <span style="font-size:11px;color:#C05800;flex-shrink:0;">🔑 Clé Groq :</span>
+    <input id="ai-apikey-input" type="password" placeholder="gsk_…" style="flex:1;border:1px solid #f0d9bc;border-radius:6px;padding:4px 8px;font-size:12px;outline:none;font-family:inherit;" />
+    <button onclick="saveGroqKey()" style="background:#C05800;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;font-weight:600;">OK</button>
+  </div>
+
+  <!-- Messages -->
+  <div id="ai-messages" style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;"></div>
+
+  <!-- Suggestions rapides -->
+  <div id="ai-suggestions" style="padding:0 12px 8px;display:flex;flex-wrap:wrap;gap:6px;flex-shrink:0;">
+    <button class="ai-suggest" onclick="askSuggestion(this)">Qui travaille aujourd'hui ?</button>
+    <button class="ai-suggest" onclick="askSuggestion(this)">Résumé de cette semaine</button>
+    <button class="ai-suggest" onclick="askSuggestion(this)">Violations actuelles ?</button>
+    <button class="ai-suggest" onclick="askSuggestion(this)">Heures par IDE ce mois</button>
+  </div>
+
+  <!-- Input -->
+  <div style="padding:10px 12px;border-top:1px solid #DDE3ED;display:flex;gap:8px;flex-shrink:0;background:#fff;">
+    <textarea id="ai-input" rows="2" placeholder="Ex: Qui est en congé la semaine prochaine ?" onkeydown="aiKeydown(event)" style="
+      flex:1;border:1px solid #DDE3ED;border-radius:8px;padding:8px 10px;
+      font-size:13px;font-family:inherit;resize:none;outline:none;color:#0D1B2E;
+      line-height:1.4;
+    "></textarea>
+    <button id="ai-send-btn" onclick="sendAiMessage()" style="
+      width:38px;height:38px;border-radius:8px;align-self:flex-end;
+      background:#0057A8;border:none;cursor:pointer;color:#fff;font-size:16px;
+      display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    ">↑</button>
+  </div>
+</div>
+
+<style>
+.ai-suggest {
+  background:#EEF2F7;border:1px solid #DDE3ED;border-radius:99px;
+  padding:4px 10px;font-size:11.5px;color:#4A5568;cursor:pointer;
+  font-family:'Inter',sans-serif;transition:background .15s;white-space:nowrap;
+}
+.ai-suggest:hover { background:#E8F1FB;border-color:#0057A8;color:#0057A8; }
+.ai-msg { max-width:90%;border-radius:10px;padding:9px 12px;font-size:13px;line-height:1.5;word-break:break-word; }
+.ai-msg.user { align-self:flex-end;background:#0057A8;color:#fff;border-bottom-right-radius:3px; }
+.ai-msg.bot  { align-self:flex-start;background:#F7F9FC;color:#0D1B2E;border:1px solid #DDE3ED;border-bottom-left-radius:3px; }
+.ai-msg.bot.loading { color:#94A3B8;font-style:italic; }
+.ai-msg.error { align-self:flex-start;background:#FDEAEA;color:#C0252D;border:1px solid #f5c6cb;border-bottom-left-radius:3px; }
+#ai-panel { display:none; }
+#ai-panel.open { display:flex; }
+#ai-fab { display:none; }
+#ai-fab.visible { display:flex; }
+</style>
+
+<script>
+// ─── GROQ CHAT ───────────────────────────────────────────────
+
+let _groqKey = localStorage.getItem('groq_api_key') || '';
+let _aiHistory = [];
+
+(function initAiChat() {
+  if (_groqKey) {
+    document.getElementById('ai-apikey-bar').style.display = 'none';
+    document.getElementById('ai-apikey-input').value = _groqKey;
+  }
+  // Afficher le bouton flottant dès que l'app est visible
+  const obs = new MutationObserver(() => {
+    const root = document.getElementById('app-root');
+    if (root && root.style.display !== 'none') {
+      document.getElementById('ai-fab').classList.add('visible');
+    } else {
+      document.getElementById('ai-fab').classList.remove('visible');
+      document.getElementById('ai-panel').classList.remove('open');
+    }
+  });
+  const root = document.getElementById('app-root');
+  if (root) obs.observe(root, { attributes:true, attributeFilter:['style'] });
+})();
+
+function saveGroqKey() {
+  const k = document.getElementById('ai-apikey-input').value.trim();
+  if (!k.startsWith('gsk_')) { alert('La clé Groq doit commencer par "gsk_"'); return; }
+  _groqKey = k;
+  localStorage.setItem('groq_api_key', k);
+  document.getElementById('ai-apikey-bar').style.display = 'none';
+}
+
+function toggleAiChat() {
+  const panel = document.getElementById('ai-panel');
+  const isOpen = panel.classList.toggle('open');
+  if (isOpen && _aiHistory.length === 0) {
+    appendBotMsg('👋 Bonjour ! Je suis votre assistant planning. Je connais tous les IDEs, leurs plannings, les codes et les statistiques.\n\nQue souhaitez-vous savoir ?');
+  }
+}
+
+function clearAiChat() {
+  _aiHistory = [];
+  document.getElementById('ai-messages').innerHTML = '';
+  appendBotMsg('💬 Conversation effacée. Comment puis-je vous aider ?');
+}
+
+function aiKeydown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendAiMessage(); }
+}
+
+function askSuggestion(btn) {
+  document.getElementById('ai-input').value = btn.textContent;
+  sendAiMessage();
+}
+
+function appendUserMsg(text) {
+  const el = document.createElement('div');
+  el.className = 'ai-msg user';
+  el.textContent = text;
+  document.getElementById('ai-messages').appendChild(el);
+  scrollAi();
+  return el;
+}
+
+function appendBotMsg(text, loading=false) {
+  const el = document.createElement('div');
+  el.className = 'ai-msg bot' + (loading ? ' loading' : '');
+  el.textContent = text;
+  document.getElementById('ai-messages').appendChild(el);
+  scrollAi();
+  return el;
+}
+
+function appendErrorMsg(text) {
+  const el = document.createElement('div');
+  el.className = 'ai-msg error';
+  el.textContent = '⚠ ' + text;
+  document.getElementById('ai-messages').appendChild(el);
+  scrollAi();
+}
+
+function scrollAi() {
+  const m = document.getElementById('ai-messages');
+  m.scrollTop = m.scrollHeight;
+}
+
+function buildPlanningContext() {
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+
+  // IDEs
+  const idesInfo = app.ides.map(ide => {
+    const stats = computeStats(ide);
+    return `- ${ide.name} (${ide.short}) : ${ide.pct}% — ${stats.worked} jours travaillés, ${stats.hours}h, ${stats.ca} CA, ${stats.am} AM`;
+  }).join('\n');
+
+  // Planning du mois courant (ou mois en cours si vue annuelle)
+  const viewMonth = app.currentMonth >= 0 ? app.currentMonth : today.getMonth();
+  const year = app.year;
+  const daysInM = new Date(year, viewMonth+1, 0).getDate();
+  const monthName = MONTHS[viewMonth];
+
+  let planLines = [];
+  for (let d = 1; d <= daysInM; d++) {
+    const ds = dateStr(year, viewMonth, d);
+    const dayWorkers = app.ides.filter(ide => {
+      const code = (app.planning[ide.id]||{})[ds];
+      return code && app.codes[code] && app.codes[code].type === 'work';
+    }).map(ide => ide.short);
+    const absentees = app.ides.filter(ide => {
+      const code = (app.planning[ide.id]||{})[ds];
+      return code && ['ca','absence','formation'].includes(app.codes[code]?.type);
+    }).map(ide => `${ide.short}(${(app.planning[ide.id]||{})[ds]})`);
+    if (dayWorkers.length || absentees.length) {
+      planLines.push(`  ${ds}: travail=[${dayWorkers.join(',')}]${absentees.length?' absences=['+absentees.join(',')+']':''}`);
+    }
+  }
+
+  // Violations
+  const violations = checkViolations ? checkViolations() : [];
+  const vioLines = violations.slice(0,10).map(v => `- [${v.type}] ${v.msg}`).join('\n');
+
+  return `Tu es un assistant expert en planning infirmier. Tu dois répondre en français, de façon claire et concise.
+
+=== CONTEXTE PLANNING ===
+Date du jour : ${todayStr}
+Année affichée : ${year}
+Mois en vue : ${monthName} ${year}
+Effectif minimum par jour : ${app.minIdePerjour}
+
+=== INFIRMIÈRES (IDEs) ===
+${idesInfo}
+
+=== CODES UTILISÉS ===
+${Object.entries(app.codes).map(([k,v])=>`${k} = ${v.label}`).join(', ')}
+
+=== PLANNING ${monthName.toUpperCase()} ${year} ===
+${planLines.join('\n') || '(Aucune donnée pour ce mois)'}
+
+=== VIOLATIONS DÉTECTÉES ===
+${vioLines || 'Aucune violation'}
+
+Réponds toujours de façon directe et utile. Si une info n'est pas dans le contexte, dis-le clairement.`;
+}
+
+async function sendAiMessage() {
+  const input = document.getElementById('ai-input');
+  const text = input.value.trim();
+  if (!text) return;
+
+  if (!_groqKey) {
+    document.getElementById('ai-apikey-bar').style.display = 'flex';
+    document.getElementById('ai-apikey-input').focus();
+    return;
+  }
+
+  input.value = '';
+  input.style.height = '';
+  appendUserMsg(text);
+
+  const loadingEl = appendBotMsg('…', true);
+  document.getElementById('ai-status').textContent = 'Réflexion en cours…';
+  document.getElementById('ai-send-btn').disabled = true;
+
+  _aiHistory.push({ role: 'user', content: text });
+
+  try {
+    const systemPrompt = buildPlanningContext();
+
+    const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + _groqKey,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'llama-3.1-70b-versatile',
+        max_tokens: 800,
+        temperature: 0.3,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          ..._aiHistory
+        ]
+      })
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(()=>({}));
+      throw new Error(err.error?.message || `Erreur HTTP ${resp.status}`);
+    }
+
+    const data = await resp.json();
+    const answer = data.choices?.[0]?.message?.content || '(Réponse vide)';
+
+    loadingEl.remove();
+    appendBotMsg(answer);
+    _aiHistory.push({ role: 'assistant', content: answer });
+
+    // Garder l'historique raisonnable (10 derniers échanges)
+    if (_aiHistory.length > 20) _aiHistory = _aiHistory.slice(-20);
+
+    document.getElementById('ai-status').textContent = 'Posez une question sur le planning…';
+  } catch (e) {
+    loadingEl.remove();
+    appendErrorMsg(e.message || 'Erreur inconnue');
+    _aiHistory.pop(); // retirer le message user en cas d'erreur
+    document.getElementById('ai-status').textContent = 'Erreur — réessayez';
+  }
+
+  document.getElementById('ai-send-btn').disabled = false;
+  document.getElementById('ai-input').focus();
+}
+</script>
+
 </body>
 </html>
