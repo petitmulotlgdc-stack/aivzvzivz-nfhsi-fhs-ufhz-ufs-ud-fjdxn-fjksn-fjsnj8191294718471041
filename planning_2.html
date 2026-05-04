@@ -2478,10 +2478,10 @@ async function confirmAddIde() {
     const userId = userData.id;
     if (!userId) throw new Error('ID utilisateur introuvable.');
 
-    // 3. Insérer le profil
+    // 3. Upsert le profil (évite le conflit si le trigger a déjà créé un profil)
     const profileRes = await fetch(`${SUPABASE_URL}/rest/v1/profiles`, {
       method: 'POST',
-      headers: { ...adminHeaders, 'Prefer': 'return=minimal' },
+      headers: { ...adminHeaders, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
       body: JSON.stringify({ id: userId, role: 'ide', ide_id: newIde.id, display_name: name, must_change_password: true })
     });
     if (!profileRes.ok) {
